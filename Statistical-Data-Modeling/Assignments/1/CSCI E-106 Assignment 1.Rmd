@@ -1,0 +1,49 @@
+---
+title: 'CSCI E-106:Assignment 1'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Due Date: February 6, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+
+
+## Problem 1 
+
+The dataset prostate comes from a study on 97 men with prostate cancer who were due to receive a radical prostatectomy. You can download this data set by installing faraway library. To get the data set, copy and paste the r command: install.packages("faraway"); library(faraway);data(prostate, package="faraway"). (100 points)
+
+The response variable for this assignment is lpsa (log of prostate‑specific antigen). The dataset includes the following variables:\newline
+- lcavol: log(cancer volume)\newline
+- lweight: log(prostate weight)\newline
+- age: age of patient\newline
+- lbph: log(benign prostatic hyperplasia amount)\newline
+- svi: seminal vesicle invasion (indicator)\newline
+- lcp: log(capsular penetration)\newline
+- gleason: Gleason score\newline
+- pgg45: percentage Gleason scores 4 or 5\newline
+- lpsa: log(prostate specific antigen)\newline
+
+a-) How many observations are in the dataset? (10 points)
+
+b-) Calculate the mean and median of each variable. Discuss whether any variables appear to have outliers, and briefly describe how you identified them.(20 points)
+
+c-) Compute the correlation matrix for all variables.Create scatterplots of each predictor versus the response variable lpsa. Identify which predictors appear to be strongly correlated with lpsa, using both the correlations and the plots to justify your answer. (20 points)
+
+d-) Build separate simple linear regression models, by using lcavol, lweight and age to explain lpsa. For each model, clearly state the fitted regression equation with estimated coefficients. (25 points)
+
+e-) For each regression model from part (d):\newline
+- Plot lpsa versus each predictor separately.\newline
+- Add the fitted regression line to each plot.\newline
+- Based on the models and plots, choose the best single‑predictor model and explain your reasoning(25 points)
