@@ -5,6 +5,7 @@ output:
   html_document:
     df_print: paged
 ---
+Brian Ledger
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, include=TRUE, eval=TRUE)
@@ -25,7 +26,8 @@ rows = nrow(prostate)
 
 There are `r rows` observations in the dataset.
 
-b-) Calculate the mean and median of each variable. Discuss whether any variables appear to have outliers, and briefly describe how you identified them.(20 points)
+b-) Calculate the mean and median of each variable. Discuss whether any 
+variables appear to have outliers, and briefly describe how you identified them.
 
 ```{r}
 variables = names(prostate)
@@ -33,9 +35,9 @@ response_variable = "lpsa"
 explanatory_variables = variables[variables != response_variable]
 
 stats = data.frame(
-  Mean = sapply(prostate, mean, na.rm = TRUE),
-  Median = sapply(prostate, median, na.rm = TRUE),
-  StandardDeviation = sapply(prostate, sd, na.rm = TRUE)
+  Mean = sapply(prostate, mean),
+  Median = sapply(prostate, median),
+  StandardDeviation = sapply(prostate, sd)
 )
 print(stats)
 ```
@@ -56,8 +58,8 @@ stats$UpperBound = stats[,"Q3"] + (1.5*stats[,"IQR"])
 stats$Outliers = lapply(variables, 
                         function(n) { 
                           length(
-                            prostate[,n][prostate[,n] < stats["LowerBound",n]]
-                            | prostate[,n][prostate[,n] < stats["UpperBound",n]]
+                            prostate[,n][prostate[,n] < stats[n, "LowerBound"]]
+                            | prostate[,n][prostate[,n] > stats[n, "UpperBound"]]
                             ) })
 for (variable in variables) {
   
@@ -65,12 +67,12 @@ for (variable in variables) {
 print(stats)
 ```
 
-The analysis does not identify any outliers.
+The factors `lweight` and `lpsa` have 3 outliers each.
  
-The pgg45 variable has a lot of 0 values, which may indicate a coding that used 
-0 instead of n/a.
+The `pgg45` variable has a lot of 0 values, which may indicate a coding that 
+used 0 instead of n/a.
  
-The gleason variable is strongly centered around the mean of 6.753, with a 
+The `gleason` variable is strongly centered around the mean of 6.753, with a 
 standard deviation of 0.722, but about 5% of observations are 8s and 9s.
 
 ```{r}
@@ -82,7 +84,10 @@ for(col in variables) {
 ```
  
 
-c-) Compute the correlation matrix for all variables.Create scatterplots of each predictor versus the response variable lpsa. Identify which predictors appear to be strongly correlated with lpsa, using both the correlations and the plots to justify your answer. (20 points)
+c-) Compute the correlation matrix for all variables. Create scatterplots of 
+each predictor versus the response variable lpsa. Identify which predictors 
+appear to be strongly correlated with lpsa, using both the correlations and the 
+plots to justify your answer.
 
 ```{r}
 correlations <- cor(prostate)
@@ -100,29 +105,34 @@ for(name in explanatory_variables) {
 }
 ```
 
-TODO: Interpret
+Factors `age` and `lbph` exhibit very weak to no correlation. Factors `lweight`
+and `gleason` exhibit a weak correlation. Factors `lci`, `lcp`, and `pgg45`
+exhibit a moderate correlation. Factor `lcavol` exhibits a strong correlation.
 
-d-) Build separate simple linear regression models, by using lcavol, lweight and age to explain lpsa. For each model, clearly state the fitted regression equation with estimated coefficients. (25 points)
+d-) Build separate simple linear regression models, by using lcavol, lweight and
+age to explain lpsa. For each model, clearly state the fitted regression 
+equation with estimated coefficients.
 
 ```{r}
 lm_lcavol = lm(lpsa ~ lcavol, prostate)
-print(lm_lcavol)
+summary(lm_lcavol)
 ```
 
 ```{r}
 lm_lweight = lm(lpsa ~ lweight, prostate)
-print(lm_lweight)
+summary(lm_lweight)
 ```
 
 ```{r}
 lm_age = lm(lpsa ~ age, prostate)
-print(lm_age)
+summary(lm_age)
 ```
 
 e-) For each regression model from part (d):\newline
 - Plot lpsa versus each predictor separately.\newline
 - Add the fitted regression line to each plot.\newline
-- Based on the models and plots, choose the best single‑predictor model and explain your reasoning(
+- Based on the models and plots, choose the best single‑predictor model and 
+explain your reasoning.
 
 ```{r}
 plot(lpsa ~ lcavol, prostate)
@@ -139,4 +149,15 @@ plot(lpsa ~ age, prostate)
 abline(lm_age)
 ```
 
-TODO: Interp (c)
+Of the three models, `lpsa ~ lcavol` has the lowest residual standard error
+(0.7875 vs 1.085 and 1.144).
+
+`lpsa ~ lcavol` has the highest multiple r-squared (0.5394 vs 0.1254 and 
+0.02876).
+
+`lpsa ~ lcavol` has the lowest p-value (2.2e-16 vs 3.729e-4 and 0.09677).
+
+Looking at the graphs, it appears that `lpsa ~ lcavol` points fall closer to the
+line of best fit.
+
+I would conclude that `lpsa ~ lcavol` is the best single-predictor model.
