@@ -1,0 +1,142 @@
+---
+title: 'CSCI E-106:Assignment 1'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, include=TRUE, eval=TRUE)
+```
+```{r}
+library(faraway)
+data(prostate, package="faraway")
+
+summary(prostate)
+```
+
+a-) How many observations are in the dataset?
+
+
+```{r}
+rows = nrow(prostate)
+```
+
+There are `r rows` observations in the dataset.
+
+b-) Calculate the mean and median of each variable. Discuss whether any variables appear to have outliers, and briefly describe how you identified them.(20 points)
+
+```{r}
+variables = names(prostate)
+response_variable = "lpsa"
+explanatory_variables = variables[variables != response_variable]
+
+stats = data.frame(
+  Mean = sapply(prostate, mean, na.rm = TRUE),
+  Median = sapply(prostate, median, na.rm = TRUE),
+  StandardDeviation = sapply(prostate, sd, na.rm = TRUE)
+)
+print(stats)
+```
+
+A typical test for outliers selects points more than 1.5*IQR beyond the 1st/3rd
+quartiles.
+
+```{r}
+stats$Q1 = sapply(prostate, quantile, na.rm = TRUE)["25%",]
+stats$Q3 = sapply(prostate, quantile, na.rm = TRUE)["75%",]
+stats$IQR = stats[,"Q3"] - stats[,"Q1"]
+```
+
+```{r}
+stats$LowerBound = stats[,"Q1"] - (1.5*stats[,"IQR"])
+stats$UpperBound = stats[,"Q3"] + (1.5*stats[,"IQR"])
+
+stats$Outliers = lapply(variables, 
+                        function(n) { 
+                          length(
+                            prostate[,n][prostate[,n] < stats["LowerBound",n]]
+                            | prostate[,n][prostate[,n] < stats["UpperBound",n]]
+                            ) })
+for (variable in variables) {
+  
+}
+print(stats)
+```
+
+The analysis does not identify any outliers.
+ 
+The pgg45 variable has a lot of 0 values, which may indicate a coding that used 
+0 instead of n/a.
+ 
+The gleason variable is strongly centered around the mean of 6.753, with a 
+standard deviation of 0.722, but about 5% of observations are 8s and 9s.
+
+```{r}
+par(mfrow = c(ceiling(ncol(prostate)/3), 3))
+for(col in variables) {
+  hist(prostate[[col]], main = col,
+       xlab = col, breaks = 30)
+}
+```
+ 
+
+c-) Compute the correlation matrix for all variables.Create scatterplots of each predictor versus the response variable lpsa. Identify which predictors appear to be strongly correlated with lpsa, using both the correlations and the plots to justify your answer. (20 points)
+
+```{r}
+correlations <- cor(prostate)
+print(round(correlations, 2))
+```
+
+```{r}
+par(mfrow=c(1,1))
+for(name in explanatory_variables) {
+  plot(prostate[,name], prostate[,response_variable], 
+       asp=1,
+       xlab = name,
+       ylab = response_variable,
+       main=paste("corr =", round(correlations[name, response_variable], 3)))
+}
+```
+
+TODO: Interpret
+
+d-) Build separate simple linear regression models, by using lcavol, lweight and age to explain lpsa. For each model, clearly state the fitted regression equation with estimated coefficients. (25 points)
+
+```{r}
+lm_lcavol = lm(lpsa ~ lcavol, prostate)
+print(lm_lcavol)
+```
+
+```{r}
+lm_lweight = lm(lpsa ~ lweight, prostate)
+print(lm_lweight)
+```
+
+```{r}
+lm_age = lm(lpsa ~ age, prostate)
+print(lm_age)
+```
+
+e-) For each regression model from part (d):\newline
+- Plot lpsa versus each predictor separately.\newline
+- Add the fitted regression line to each plot.\newline
+- Based on the models and plots, choose the best single‑predictor model and explain your reasoning(
+
+```{r}
+plot(lpsa ~ lcavol, prostate)
+abline(lm_lcavol)
+```
+
+```{r}
+plot(lpsa ~ lweight, prostate)
+abline(lm_lweight)
+```
+
+```{r}
+plot(lpsa ~ age, prostate)
+abline(lm_age)
+```
+
+TODO: Interp (c)
