@@ -1,0 +1,180 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for rotated page geometry
+\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex
+								
+%\usepackage{{Gratzer-Color-Scheme}	% Active to color theorems red and lemmas blue
+	
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+%SetFonts
+
+%SetFonts
+
+
+\title{Problem Set 1}
+\author{Brian Ledger}
+%\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\section*{Problem 1}
+\emph{A random variable $X$ takes values $\{1,2,4\}$ with probabilities $\{0.2,0.5,0.3\}$:}
+
+$$
+P(X=1) = 0.2, \quad P(X=2) = 0.5, \quad P(X = 4) = 0.3
+$$
+\subsection*{a)}
+\emph{Compute the expected value $\mathbb{E}[X]$.}
+
+The formula for expected value is $\mathbb{E}[X] = \sum^{x_i} x_iP(X=x_i)$
+
+The expected value for X is
+
+$$
+\mathbb{E}[X] = \sum^{x_i} x_iP(X=x_i) = 1*0.2 + 2 * 0.5 + 4 * 0.3 = 2.4
+$$
+
+\subsection*{b)}
+\emph{Explain what the expected value represents in this context.}
+
+The expected value is the weighted sum of all possible outcomes, where the weight of each outcome is its respective probability.
+
+\section*{Problem 2}
+\emph{Using the random variable X from Problem 1:}
+
+\subsection*{a)}
+\emph{Compute $\mathbb{E}[X^2]$.}
+
+$$
+\mathbb{E}[X^2] = \sum^{x_i} x_i^2P(X=x_i) = 1*0.2 + 4 * 0.5 + 16 * 0.3 = 8.8
+$$
+
+\subsection*{b)}
+\emph{Compute the variance $Var(X)$.}
+
+The formula for variance is $Var(X) = \mathbb{E}[(X-\bar{X})^2] = \mathbb{E}[X^2]-\mathbb{E}[X]^2$.
+
+$$
+\mathbb{E}[X^2]-\mathbb{E}[X]^2 = 8.8 - 2.4^2 = 3.04
+$$
+
+\subsection*{c)}
+\emph{Compute the standard deviation $\sigma_X$.}
+
+The mean of $X$ is $1 + 2 + 4 / 3 = 7/3 = 2.\bar{3}$.
+
+The formula for standard deviation of a sample is:
+
+$$
+\sigma = \sqrt{\frac{\sum^{x_i} (x_i-\bar{X})^2}{N-1}}
+$$
+
+\begin{eqnarray*}
+\sigma &=& \sqrt{\frac{\sum^{x_i} (x_i-\bar{X})^2}{N-1}}\\
+&=& \sqrt{\frac{(1-2.\bar{3})^2 + (2-2.\bar{3})^2 + (4-2.\bar{3})^2}{2}}\\
+&=& \sqrt{\frac{-1.\bar{3}^2 + -0.\bar{3}^2 + 1.\bar{6}^2}{2}}\\
+&=& \sqrt{\frac{-1.\bar{7} + -0.\bar{1} + 2.\bar{7}}{2}}\\
+&=& \sqrt{\frac{-1.\bar{7} + -0.\bar{1} + 2.\bar{7}}{2}}\\
+&=& \sqrt{\frac{4.\bar{6}}{2}}\\
+&=& \sqrt{2.\bar{3}}\\
+&\approx&1.528
+\end{eqnarray*}
+
+
+\subsection*{d)}
+\emph{Interpret the meaning of the standard deviation.}
+
+The standard deviation measures dispersion about a mean.
+
+Approximately 68\% of data fall within 1.528 of the mean.
+
+\section*{Problem 3}
+\subsection*{a)}
+\emph{A trader receives \$1 if a stock goes up tomorrow and \$0 otherwise. The probability the stock goes up is $p = 0.6.$}
+
+\subsection*{b)}
+\emph{Define the random variable X.}
+
+$$
+P(X) = 
+ \begin{cases} 
+      0.4, & X = \$0 \\
+      0.6, & X = \$1
+   \end{cases}
+$$
+
+\subsection*{c)}
+\emph{Identify the distribution of X.}
+
+The distribution of $X$ is discrete, binary. This is a binomial distribution. A binomial distribution with one trial is a Bernoulli distribution.
+
+\subsection*{d)}
+\emph{Compute $\mathbb{E}[X]$, $Var(X)$, and $\sigma_{X}$.}
+
+$$
+\mathbb{E}[X] = \$0*0.4 + \$1*0.6 = \$0.60
+$$
+
+$$
+\bar{X} = \frac{0+1}{2} = 0.5
+$$
+
+$$
+Var_{population}(X) = \frac{-0.5^2 + 0.5^2}{2} = 0.25
+$$
+
+$$
+Var_{sample}(X) = \frac{-0.5^2 + 0.5^2}{1} = 0.5
+$$
+
+$$
+\sigma^{population}_X = \sqrt{Var_{population}(X)} = 0.5
+$$
+
+$$
+\sigma^{sample}_X = \sqrt{Var_{sample}(X)} \approx 0.707
+$$
+
+\section*{Problem 4}
+\emph{A sales makes n=5 independent sales calls, each with probability of success $p = 0.3.$.}
+
+\subsection*{a)}
+Define the random variable X.
+
+\subsection*{b)}
+\emph{Identify the distribution of X.}
+
+\subsection*{c)}
+\emph{Compute $P(X = 3)$.}
+
+\subsection*{d)}
+\emph{Compute $\mathbb{E}[X]$ and $Var(X)$.}
+
+\section*{Problem 5}
+
+\subsection{a)}
+\subsection{b)}
+
+
+\section*{Problem 6}
+
+\subsection{a)}
+\subsection{b)}
+\subsection{c)}
+\subsection{d)}
+
+\section*{Problem 7}
+
+\subsection{a)}
+\subsection{b)}
+
+\section*{Problem 8}
+
+\subsection{a)}
+\subsection{b)}
+\subsection{c)}
+\end{document}  
