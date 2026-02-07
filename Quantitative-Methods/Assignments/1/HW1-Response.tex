@@ -140,41 +140,117 @@ $$
 $$
 
 \section*{Problem 4}
-\emph{A sales makes n=5 independent sales calls, each with probability of success $p = 0.3.$.}
+\emph{A salesperson makes n=5 independent sales calls, each with probability of success $p = 0.3$.}
 
 \subsection*{a)}
 Define the random variable X.
 
+$$
+X \sim B(n=5, p = 0.3)
+$$
+
+$X$ is the number of successful sales calls in a trial of 5 independent sales calls. The distribution of $X$ successes in $n$ independent trials, with probability of success, $p$, is a Binomial Distribution.
+
 \subsection*{b)}
 \emph{Identify the distribution of X.}
+
+The general formula for $k$ successes in $n$ independent trials, with probability of success, $p$ is:
+
+$$
+Pr(X = k) = \binom{n}{k} p^k*(1-p)^{n-k}
+$$
+
+With $p=0.3$, this evolves into:
+
+\begin{eqnarray*}
+Pr(X=k)&=&\binom{n}{k} 0.3^k*0.7^n*0.7^{-k}\\
+&=& \binom{n}{k} 0.7^n*e^{-k(ln(0.7-ln(0.3))}\\
+&=& \binom{n}{k} 0.7^n*e^{-0.847k}
+\end{eqnarray*}
+
+With $n=5$, this evolves into:
+\begin{eqnarray*}
+\binom{5}{k} 0.7^5*e^{-0.847k}
+&=& \binom{5}{k} 0.168e^{-0.847k}\\
+&=& \frac{5!*0.168e^{-0.847k}}{k!(5-k)!}\\
+&=& \frac{120 * 0.168e^{-0.847k}}{k!(5-k)!}\\
+&=& \frac{20.16e^{-0.847k}}{k!(5-k)!}
+\end{eqnarray*}
+
+Tabulated over the 6 possible outcomes, with 3 significant figures:
+
+\begin{tabular}{|l|l|}\hline
+k&P(X=k)\\\hline
+0&0.168\\\hline
+1&0.360\\\hline
+2&0.308\\\hline
+3&0.132\\\hline
+4&0.028\\\hline
+5&0.002\\\hline
+\end{tabular}
 
 \subsection*{c)}
 \emph{Compute $P(X = 3)$.}
 
+$$
+P(X = 3) \approx 0.132
+$$
+
 \subsection*{d)}
 \emph{Compute $\mathbb{E}[X]$ and $Var(X)$.}
 
+The expectation for a binomial distribution is $\mathbb{E}[x] = np$. With $n=5$ and $p=0.3$), we have $\mathbb{E}[x] = 1.5.$
+
+The variance for a binomial distribution is $Var(X) = np(1-p)$. With $n=5$ and $p=0.3$), we have $Var(X) = 1.05$.
+
 \section*{Problem 5}
+\emph{Using the binomial model from Problem 4:}
 
-\subsection{a)}
-\subsection{b)}
+\subsection*{a)}
+\emph{What does the standard deviation tell you about the number of successful calls?}
 
+The standard deviation measures the expected dispersion around the mean.
+
+In this case, the s.d. is ~1.025, so you may expect 1 to 2 out of 5 calls to succeed, most of the time.
+
+\subsection*{b)}
+\emph{Would you expect most outcomes to be close to the expected value? Why?}
+
+The expected value is the projected average over many calls. The standard deviation of ~1.025 around the expected value of 1.5 indicates that most trials will see 2-3 successes. This seems likely, given that 2 and 3 successes are the most probable of outcomes in a trial of 5 calls.
 
 \section*{Problem 6}
+\emph{The number of customer complains arriving per hour follows a Poisson distribution with mean $\lambda = 2$ complaints/hour.}
+\subsection*{a)}
+\emph{Write the probability mass function.}
 
-\subsection{a)}
-\subsection{b)}
-\subsection{c)}
-\subsection{d)}
+\subsection*{b)}
+\emph{Compute $P(X=3)$.}
+
+\subsection*{c)}
+\emph{Compute $\mathbb{E}[X]$, $Var(X)$, and $\sigma_X$.}
+
+\subsection*{d)}
+\emph{Explain why the Poisson distribution is appropriate here.}
 
 \section*{Problem 7}
+\emph{Compare the variance and expected value of a Poisson distribution.}
 
 \subsection{a)}
+\emph{What special property do you observe?}
+
 \subsection{b)}
+\emph{How does this differ from the binomial distribution?}
 
 \section*{Problem 8}
+\emph{Answer briefly:}
 
 \subsection{a)}
+\emph{When should a Bernoulli distribution be used instead of a binomial?}
+
 \subsection{b)}
+\emph{Why does the Poisson distribution not require a fixed number of trials?}
+
 \subsection{c)}
+\emph{In practical terms, what does a high standard deviation imply?}
+
 \end{document}  

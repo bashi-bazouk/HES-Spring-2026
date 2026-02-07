@@ -77,7 +77,7 @@ standard deviation of 0.722, but about 5% of observations are 8s and 9s.
 
 ```{r}
 par(mfrow = c(ceiling(ncol(prostate)/3), 3))
-for(col in variables) {
+for(col in variables) { 
   hist(prostate[[col]], main = col,
        xlab = col, breaks = 30)
 }
