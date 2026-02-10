@@ -1,0 +1,37 @@
+---
+title: 'CSCI E-106:Assignment 2'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Due Date: February 13, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+
+
+## Problem 1 
+
+Refer to the CDI data set.  Use the number of active physicians as Y and total personal income as X. (50 points)
+
+a-) Built a regression model to predict Y by using X. Write down the stand error of the slope and intercept. (5 points)
+
+b-) Are the slope and intercept statistically significant?  Write down your null and alternative hypothesis and p value of the test. Calculate the 95% Confidence interval for the slope. (20 points)
+
+c-) Predict the number of active physicians for total personal income of 100000,250000 and 50000. Calculate the 95% confidence interval (Hint: Use the range of total personel income to identify which observations are within the range of the training data) (20 points)
+
+d-) What is the error variance of the  regression line?(5 points)
+
+## Problem 2 
+
+Refer to the CDI data set. Use the number of active physicians as Y and total personal income as X. Select 1,000 random samples of 400 observations, fit the regression model and record $\beta_0$ and $\beta_1$ for each selected sample. Calculate the mean and variance of $\beta_0$ and $\beta_1$ based on the 1,000 different regression line and compare against the regression model in question 1 part b. (50 points)
