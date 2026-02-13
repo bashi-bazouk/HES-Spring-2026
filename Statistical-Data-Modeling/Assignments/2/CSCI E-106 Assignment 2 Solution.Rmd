@@ -15,35 +15,103 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Problem 1 
 
-Refer to the CDI data set.  Use the number of active physicians as Y and total personal income as X.
+_Refer to the CDI data set.  Use the number of active physicians as $Y$ and 
+total personal income as $X$._
 
 ```{r}
 cdi <- read.csv("CDI Data.csv")
-summary(cdi)
 ```
 
-```{r}
-variables = names(cdi)
-numeric_variables = names(cdi[, sapply(cdi, is.numeric)])
-response_variable = "Number.of.active.physicians"
-explanatory_variable = "Total.personal.income"
-```
+_a-) Build a regression model to predict Y by using X. Write down the standard 
+error of the slope and intercept._
 
-a-) Built a regression model to predict Y by using X. Write down the stand error of the slope and intercept.
 ```{r}
-response_variable = "Number.of.active.physicians"
-explanatory_variable = "Total.personal.income"
-
 fit = lm(Number.of.active.physicians ~ Total.personal.income, cdi)
 summary(fit)
 ```
 
-b-) Are the slope and intercept statistically significant?  Write down your null and alternative hypothesis and p value of the test. Calculate the 95% Confidence interval for the slope. (20 points)
+The standard error of the slope is 0.00211. 
 
-c-) Predict the number of active physicians for total personal income of 100000,250000 and 50000. Calculate the 95% confidence interval (Hint: Use the range of total personel income to identify which observations are within the range of the training data) (20 points)
+The standard error of the intercept is 31.83333.
 
-d-) What is the error variance of the  regression line?(5 points)
+_b-) Are the slope and intercept statistically significant?  Write down your null and alternative hypothesis and p value of the test. Calculate the 95% Confidence interval for the slope._
+
+The null hypothesis for the intercept is that the intercept is 0. The 
+alternative hypothesis for the intercept is that the intercept is not 0.
+
+The t-statistic for the intercept at -48.39485 is -1.52. The probability of
+getting a t-statistic at least as large as -1.52 under the null hypothesis is 
+0.129.
+
+If I take a significance level to be 0.05, I cannot discharge the null
+hypothesis, because 0.129 > 0.05.
+
+The null hypothesis for the slope is that the slope is 0. The alternative 
+hypothesis for the slope is that the slope is not 0.
+
+The t-statistic for the slope at 0.13170 is 62.41. The probability of getting a
+t-statistic at least as large as 62.41 is $2*10^{-16}$.
+
+If I take a significance level to be 0.05, I can discharge the null
+hypothesis, because $2*10^{-16}$ < 0.05.
+
+_c-) Predict the number of active physicians for total personal income of 
+100,000, 250,000 and 50,000. Calculate the 95% confidence interval (Hint: Use 
+the range of total personal income to identify which observations are within the 
+range of the training data)_
+
+```{r}
+predictions = data.frame(Total.personal.income=c(100000, 250000, 50000))
+predictions$Number.of.active.physicians = predict(
+  fit, newdata = predictions, interval="confidence", level=0.95
+)
+print(predictions)
+```
+
+The 95% confidence interval for number of physicians where total personal income
+is \$100,000 is $(12735.899, 13507.549)$.
+
+The 95% confidence interval for number of physicians where total personal income
+is \$250,000 is $(31871.240, 33882.565)$.
+
+The 95% confidence interval for number of physicians where total personal income
+is \$50,000 is $(6353.955, 6719.374)$.
+
+_d-) What is the error variance of the  regression line?_
+
+The formula for error variance of a regression line is
+
+$$
+S^2 = \frac{SSE}{n-2}
+$$
+
+The SSE and (n-2) are 569.7 and 438 respectively. This gives $S^2 = 1.300$.
+
+
 
 ## Problem 2 
 
 Refer to the CDI data set. Use the number of active physicians as Y and total personal income as X. Select 1,000 random samples of 400 observations, fit the regression model and record $\beta_0$ and $\beta_1$ for each selected sample. Calculate the mean and variance of $\beta_0$ and $\beta_1$ based on the 1,000 different regression line and compare against the regression model in question 1 part b. (50 points)
+
+```{r}
+data = data.frame()
+for (i in 1:1000) {
+  sample = cdi[sample(nrow(cdi), 400), ]
+  fit = lm(Number.of.active.physicians ~ Total.personal.income, sample)
+  data = rbind(data, coef(fit))
+}
+stats = data.frame(
+  mean=c(mean(data[,1]), mean(data[,2])), 
+  var=c(var(data[,1]), var(data[,2])), 
+  stderr=c(sd(data[,1]), sd(data[,2]))
+)
+rownames(stats) = c("(Intercept)", "Total.personal.income")
+print(stats)
+```
+
+The estimates of mean are pretty much the same. The variances/stderrs of the
+intercepts differ by a factor of ~5.
+
+The difference in variances of the intercepts may be less important because the 
+intercept already fails to differ significantly from 0.
+
