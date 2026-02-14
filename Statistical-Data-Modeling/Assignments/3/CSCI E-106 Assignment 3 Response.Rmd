@@ -1,0 +1,49 @@
+---
+title: 'CSCI E-106:Assignment 3'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Due Date: February 20, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+
+
+## Problem 1
+
+Refer to the Crime rate data. A criminologist studying the relationship between level of education-and crime rate in medium-sized U.S. counties collected the following data for a random sample of 84 counties; X is the percentage of individuals in the county having at least a high-school diploma, and Y is the crime rate (crimes reported per 100,000 residents) last year. (100 points)
+
+a-) Create train data set by selecting 70% of the data randomly and use the remaining 30% of the data as a test data set (use set.seed(10) before selecting the sample). (5 points) 
+
+**Use train data set to answer questions for part b to i**
+
+b-) Build a regression model to predict Y on the train data set. Comment on your model. Are there any outliers in the data set? Are there errors normaly distributed? (25 points) 
+
+c-) Set up the ANOVA table for the regression model.(5 points) 
+
+d-) Carry out the test in part a by means of the F test. Show the numerical equivalence of the two test statistics and decision rules. Is the P-value for the F test the same as that for the t test? (5 points) 
+
+e-) By how much is the total variation in crime rate (Y) reduced when percentage of high school graduates (X) is introduced into the analysis? Is this a relatively large or small reduction? (5 points) 
+
+f-) State the full and reduced models. (5 points) 
+
+g-) Obtain (1) SSE(F), (2) SSE(R), (3) dfF. (4) dfR, (5) test statistic F* for the general linear test, (6) decision rule. (5 points) 
+
+h-) Are the test statistic F* and the decision rule for the general linear test numerically equivalent to those in part b? (5 Points)
+
+i-) Evaluate model performance and stability on the train data set (20 points)
+
+**Use test data set below**
+
+j-) Evaluate model performance and stability on the test set and compare it to the training set. Comment on your findings? (20 points)
