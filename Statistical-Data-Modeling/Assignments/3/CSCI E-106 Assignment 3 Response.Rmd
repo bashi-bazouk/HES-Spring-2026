@@ -4,45 +4,360 @@ output:
   pdf_document: default
   html_document:
     df_print: paged
+  header-includes:
+    - \usepackage{amsmath}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Due Date: February 20, 2026 at 11:59 pm EST
-### Instructions
-
-Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
-
-Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
-
---------------------------------------------------------------------------------------
-
+### Brian Ledger
 
 ## Problem 1
 
-Refer to the Crime rate data. A criminologist studying the relationship between level of education-and crime rate in medium-sized U.S. counties collected the following data for a random sample of 84 counties; X is the percentage of individuals in the county having at least a high-school diploma, and Y is the crime rate (crimes reported per 100,000 residents) last year. (100 points)
+Refer to the Crime rate data. A criminologist studying the relationship between 
+level of education-and crime rate in medium-sized U.S. counties collected the 
+following data for a random sample of 84 counties; X is the percentage of 
+individuals in the county having at least a high-school diploma, and Y is the 
+crime rate (crimes reported per 100,000 residents) last year. (100 points)
 
-a-) Create train data set by selecting 70% of the data randomly and use the remaining 30% of the data as a test data set (use set.seed(10) before selecting the sample). (5 points) 
+```{R}
+set.seed(10)
+crime_rate_data <- read.csv("Crime Rate.csv")
+```
 
+a-) Create train data set by selecting 70% of the data randomly and use the 
+remaining 30% of the data as a test data set (use set.seed(10) before selecting 
+the sample).
+
+```{r}
+popN = nrow(crime_rate_data)
+alphaN = 7/10 * popN
+idx_sample = sample(popN, size = alphaN, replace=FALSE)
+sample = crime_rate_data[idx_sample,]
+sampleN = nrow(sample)
+test = crime_rate_data[-idx_sample,]
+testN = nrow(test)
+
+training_data = sample
+test_data = test
+```
 **Use train data set to answer questions for part b to i**
 
-b-) Build a regression model to predict Y on the train data set. Comment on your model. Are there any outliers in the data set? Are there errors normaly distributed? (25 points) 
+b-) \emph{Build a regression model to predict Y on the train data set. }
 
-c-) Set up the ANOVA table for the regression model.(5 points) 
+```{R}
+linear_model = lm(Y ~ X, training_data)
+summary(linear_model)
+```
 
-d-) Carry out the test in part a by means of the F test. Show the numerical equivalence of the two test statistics and decision rules. Is the P-value for the F test the same as that for the t test? (5 points) 
+\emph{Comment on your model.}
 
-e-) By how much is the total variation in crime rate (Y) reduced when percentage of high school graduates (X) is introduced into the analysis? Is this a relatively large or small reduction? (5 points) 
+The p-value for the intercept is $0.000124 < 0.05$. This indicates that the
+intercept is statistically significant.
 
-f-) State the full and reduced models. (5 points) 
+The p-value for the slope is $0.016051 < 0.05$. This indicates that the
+slope is statistically significant.
 
-g-) Obtain (1) SSE(F), (2) SSE(R), (3) dfF. (4) dfR, (5) test statistic F* for the general linear test, (6) decision rule. (5 points) 
+The F-statistic is $6.165 >> 1$. We would reject the hypothesis that the slope
+is 0.
 
-h-) Are the test statistic F* and the decision rule for the general linear test numerically equivalent to those in part b? (5 Points)
+\emph{Are there any outliers in the data set?}
 
-i-) Evaluate model performance and stability on the train data set (20 points)
+We can assess whether the errors are normally distributed by looking for 
+outliers in the residuals, typically, errors more than $2*\sigma$ are considered
+moderate outliers.
+
+```{R}
+print(linear_model$residuals[linear_model$residuals / sigma(linear_model) > 2])
+```
+
+A single outlier is identified. The rest of the residuals tend to fit a standard
+normal distribution.
+
+\emph{Are there errors normally distributed?}
+
+### Q-Q plot check for normally distributed residuals.
+
+We can look at the Q-Q plot of the residuals. If the residuals are normally
+distributed, they will fall into a straight line.
+
+```{R}
+plot(linear_model, which = c(2))
+```
+
+The residuals appear to deviate at the ends of the plot, suggesting they are
+not normally distributed.
+
+### Shapiro Test for normally distributed residuals.
+
+We can run a Shapiro test to get a P-value. The null hypothesis is
+that the data follow the normal distribution. The alternative hypothesis is that
+the data do not follow the normal distribution.
+
+```{R}
+lm_res = linear_model$residuals
+st = shapiro.test(lm_res)
+st
+```
+
+The p-value for Shapiro is `r st$p.value`.
+
+```{r}
+shapiro_decision = st$p.value > 0.05
+if (st$p.value > 0.05) {
+  print(sprintf("%.3f > 0.05 : H_0", st$p.value))
+} else {
+  print(sprintf("%.3f < 0.05 : H_a", st$p.value))
+}
+```
+
+### Kolmogorov-Smirnov Test for normally distributed residuals.
+
+We can run a Kolmogorov-Smirnov test to get a P-value. The null hypothesis is
+that the data follow the normal distribution. The alternative hypothesis is that
+the data do not follow the normal distribution.
+
+```{R}
+
+kst = ks.test(lm_res, "pnorm", mean(lm_res), sd(lm_res))
+kst
+```
+
+The p-value for K.S. is `r kst$p.value`.
+
+```{r}
+if (kst$p.value > 0.05) {
+  print(sprintf("%.3f > 0.05, so we fail to reject the null hypothesis.", kst$p.value))
+} else {
+  print(sprintf("%.3f < 0.05, so we accept the alternative hypothesis.", kst$p.value))
+}
+```
+
+c-) \emph{Set up the ANOVA table for the regression model.}
+
+Let's state the null and alternative hypotheses:
+
+$$
+\begin{aligned}
+H_0: & \beta_1 = 0\\
+H_a: & \beta_1 \neq 0
+\end{aligned}
+$$
+
+
+```{R}
+anova_table_constructor <- function(training_data) {
+    linear_model <- lm(training_data)
+    mean_y = mean(training_data[,"Y"])
+    
+    r_h0 = mean_y - training_data[,"Y"]
+    r_h1 = linear_model$residuals
+    r_r = predict(linear_model, training_data) - mean_y
+    
+    anova_table = data.frame(row.names = c("Regression", "Error", "Total"))
+    anova_table = cbind(anova_table, "D.F."=c(
+      1,
+      nrow(training_data)-2, 
+      nrow(training_data)-1)
+    )
+    anova_table = cbind(anova_table, "S.S."=c(
+      sum(r_r^2),
+      sum(r_h1^2), 
+      sum(r_h0^2))
+    )
+    anova_table = cbind(anova_table, "M.S.S."=
+                          c(anova_table[,"S.S."]/anova_table[,"D.F."])
+    )
+  return(anova_table)
+}
+
+
+
+mean_y = mean(training_data[,"Y"])
+
+r_h0 = mean_y - training_data[,"Y"]
+
+r_h1 = linear_model$residuals
+
+r_r = predict(linear_model, training_data) - mean_y
+
+anova_table = data.frame(row.names = c("Regression", "Error", "Total"))
+
+anova_table = cbind(anova_table, "D.F."=c(
+  1,
+  nrow(training_data)-2, 
+  nrow(training_data)-1)
+)
+
+anova_table = cbind(anova_table, "S.S."=c(
+  sum(r_r^2),
+  sum(r_h1^2), 
+  sum(r_h0^2))
+)
+
+anova_table = cbind(
+  anova_table,
+  "M.S.S."= c(anova_table[,"S.S."]/anova_table[,"D.F."])
+)
+
+print(anova_table)
+```
+
+```{R}
+f_value = anova_table[["Regression", "M.S.S."]]/anova_table[["Error", "M.S.S."]]
+
+p_value = 1-pf(f_value, 1, 56)
+```
+
+The F value is `r f_value`. The imputed P-value is `r p_value`.
+
+This is confirmed by the built-in ANOVA function:
+
+```{R}
+summary(aov(linear_model))
+```
+
+d-) \emph{Carry out the test in part a by means of the T test.} 
+
+\emph{Is the P-value for the F test the same as that for the t test?}
+
+### T-Test
+
+The Student's t-test and the one-sided F-test (with 1 numerator degree of 
+freedom) are equivalent when comparing two groups or testing a single regression 
+coefficient.
+
+##
+
+$$
+F(1, df_d) = t^2(df_d)
+$$
+
+The two-tailed T-Test and the one-tailed F-Test are related thusly:
+
+$$
+F_{0.95}(1, n-2) \cong t_{.975}(n-2)^2
+$$
+
+
+\emph{Show the numerical equivalence of the two test statistics and decision 
+rules.}
+
+```{R}
+t_squared = summary(linear_model)$coefficients["X","t value"]^2
+f = anova(linear_model)["X","F value"]
+
+print(t_squared-f)
+```
+
+The difference between $t^2$ and $f$ is negligibly small.
+
+```{R}
+critical_t_squared = qt(0.975, nrow(training_data)-2)^2
+critical_f = qf(0.95, 1, nrow(training_data)-2)
+
+print(critical_t_squared - critical_f)
+```
+
+The difference_between $(t^*)^2$ and $f^*$ is negligibly small.
+
+e-) \emph{By how much is the total variation in crime rate (Y) reduced when 
+percentage of high school graduates (X) is introduced into the analysis?} 
+
+```{R}
+print(anova_table)
+```
+
+The sum of squared residuals for the model without $X$ is 
+`r anova_table["Total", "S.S."]`.
+
+The sum of squared variation for the model with $X$ is 
+`r anova_table["Error", "S.S."]`.
+
+The total variation is reduced by 
+`r anova_table["Total", "S.S."] - anova_table["Error", "S.S."]`
+
+\emph{Is this a relatively large or small reduction?}
+
+```{R}
+SST = anova_table["Total", "S.S."]
+SSE = anova_table["Error", "S.S."]
+coeff = (SSE - SST) / SST
+percent_decrease = (1 - coeff) / 100
+```
+
+This constitutes a reduction of `r percent_decrease`\%. This is significant.
+
+f-) \emph{State the full and reduced models.}
+
+The full model is
+
+$$
+Y = \beta_0 + \beta_1 X + \varepsilon
+$$
+The reduced model is
+
+$$
+Y = \beta_0 + \varepsilon
+$$
+
+g-) \begin{em} Obtain 
+\begin{enumerate}
+\item SSE(F), 
+\item SSE(R), 
+\item dfF. 
+\item dfR,
+\item test statistic F* for the general linear test, 
+\item decision rule.
+\end{enumerate}
+\end{em}
+
+These figures are equivalent to the figures in part B, and in the ANOVA table.
+
+```
+print(anova_table)
+```
+
+$SSE(F)$ is equivalent to $SSE$. $SSE(R)$ is equivalent to $SST$. $dfF$ is
+equivalent to $DFE$. $dfR$ is equivalent to $DFT$.
+
+The test statistic $F*$ is `r qf(0.95,1, nrow(training_data)-2)`.
+
+The decision rule is to reject the null hypothesis if $SSR/MSE < F*$, else
+fail to reject.
+
+h-) Are the test statistic F* and the decision rule for the general linear test 
+numerically equivalent to those in part b?
+
+Yes.
+
+i-) Evaluate model performance and stability on the train data set.
+
+Let's run it over a bunch of samples.
+
+```{r}
+RUNS = 2
+run_data = data.frame()
+for (i in 1:RUNS) {
+  idx_training_data = sample(popN, size = alphaN, replace=FALSE)
+  training_data = crime_rate_data[idx_training_data,]
+  test_data = crime_rate_data[-idx_training_data,]
+  
+  # Run Models
+  linear_model = lm(Y ~ X, training_data)
+  anova_model = anova(linear_model)
+  print("### LM AND AOV.SUMMARY")
+  if (i==1) {
+    summary(linear_model)
+    summary(anova_model)
+  }
+  
+  # Collect MSR, MSE
+  run_data = rbind(run_data, t(c(""))) 
+}
+```
 
 **Use test data set below**
 

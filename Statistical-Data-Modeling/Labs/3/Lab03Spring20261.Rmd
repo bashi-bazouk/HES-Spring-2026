@@ -1,0 +1,112 @@
+---
+title: "Lab03 Spring 2026 Section"
+output:
+  pdf_document: default
+  html_document: default
+date: "2026-02-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## (Textbook 2.23) Refer to Copier maintenance Problem 1.19 
+a. Set up the ANOVA table. 
+```{r problem 2.23a}
+df19 = read.table("CH01PR19.txt", 
+                          header=FALSE, sep="", 
+                          col.names=c("y","x"))
+
+lmFit19 = lm(y~x, data = df19)
+anova(lmFit19)
+
+```
+b. What is estimated by MSR in your ANOVA table? by MSE? Under what condition do MSR
+and MSE estimate the same quantity? 
+
+> You need to look at your ANOVA table for the values. 
+MSR  = Mean SQ of X = 3.5878
+MSE = Mean SQ of residulas = .3883 
+They would estimate the same quantity when b1=0. Your slope has to be 0 for MSE = MSR. 
+
+
+c. Conduct an F test of whether or not B1 = O. Control the a risk at .01. State the alternatives, decision rule, and conclusion. 
+```{r problem 2.23c}
+f = 3.5878 / .3883
+print(f) 
+
+```
+
+> alternatives & decision rule: $H_0$: $B_1$ =0, $H_a$:$B_1$ !=0
+
+> Conclusion: reject the null since p-value is less than our alpha (risk) at .01.
+
+> P-value: (found in anova): .002917 < .01
+
+> With the question in the homework, you have to take it further because you have a train and test dataset now
+
+> Step #1 run the regression  problem above and subtract some objects to use later. This is creating your coefficient objects
+
+> Step #2 obtain the F statistics and p-value associated with the regression
+
+> Step #3 apply the decision rule if p-value > 0.01 (this is from this example - what does your homework say?) 
+
+> Step #4 get the F critical
+
+> Step #5 Confirm numerical equivalence - #Is the P-value for the F test the same as that for the t test? 
+
+
+d. What is the absolute magnitude of the reduction in the variation of Y when X is introduced into the regression model? What is the relative reduction? What is the name of the latter measure? 
+```{r problem 2.23d}
+
+#you can find SSE and SSR from lmFit19 
+anova(lmFit19)
+SSE = 45.818 
+SSR = 3.588 
+
+#you can find SSE(R) from lmFit19_r when x= 1 (this is our reduced regression) 
+lmFit19_r = lm(formula = y ~ 1, data= df19)
+anova(lmFit19_r)
+
+# SSE(R) = 49.405 
+
+#rr = SSR / SSE
+rr = 3.588/49.405 
+print(rr)
+
+```
+
+> Relative reduction: 0.07262423
+
+ 
+
+## (Textbook 2.30) Refer to Crime rate Problem 1.28.
+a. Test whether or not there is a linear association between crime rate and percentage of high school graduates, using a t test with a = .01. State the alternatives, decision rule, and conclusion. What is the P-value of the test? 
+```{r problem 2.30a}
+df_crimeRate = read.table("CH01PR28.txt", 
+                          header=FALSE, sep="", 
+                          col.names=c("cr","ed"))
+lmFit1_28 = lm(cr~ed, data=df_crimeRate)
+summary(lmFit1_28)
+
+#here we are working with a t-sided t-test
+
+#calculcate t-value
+t = -170.58 / 41.57
+print(t)
+
+#calculate critical value
+#our degrees of freedom is showing that you have about 84 observations minus 2 (estimating 2 unknown parameters - slope and intercept)
+critical = qt(0.995, df = 82)
+print(critical)
+```
+> alternatives: $H_0$: $B_1$= 0 $H_a$: $B_1$ neq 0 
+
+> t-value: -4.103
+> p-value (found in summary): 9.571e-05
+
+> decision rule: reject $H_0$ if |t| > 2.637 or reject $H_0$ if the p-value <.01
+
+> conclusion: So we reject the null and say that our regression model is significant 
+
+

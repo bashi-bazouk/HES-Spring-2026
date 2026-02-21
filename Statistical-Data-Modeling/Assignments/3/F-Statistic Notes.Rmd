@@ -1,0 +1,171 @@
+---
+title: 'Analysis of Variance on a Linear Model'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  header-includes:
+    - \usepackage{amsmath}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The linear model is
+
+$$
+\begin{aligned}
+Y &= \beta_0 + \beta_1X + \varepsilon\\\\
+&= [1,X]\beta + \varepsilon
+\end{aligned}
+$$
+where $\beta = [\beta_0, ..., \beta_k]$. 
+
+In ANOVA, we assume that $\varepsilon \sim N(\mu, \sigma)$. We also assume the X
+are independent and identically distributed.
+
+The solution matrix for this linear model is as follows:
+
+$$
+H : = [1,X]([1,X]^T[1,X])^{-1}[1,X]
+$$
+The dimension of $H$ is $N$. $H$ is idempotent, so $rank(H) = trace(H)$.
+
+### The Null and Alternative Hypotheses
+
+Let's state the null and alternative hypotheses:
+
+$$
+\begin{aligned}
+H_0: & \beta_1 = 0\\
+H_a: & \beta_1 \neq 0
+\end{aligned}
+$$
+
+### Rank of H in each model.
+
+Let $H^0$ be $H$ in the model of the null hypothesis. Let $H^a$ be $H$ in the 
+model of the alternative hypothesis.
+
+Under the null hypothesis, the linear model degenerates into 
+
+$$
+Y = \beta_0 + \varepsilon
+$$
+
+The fit of this model is given by $\beta_0 = \bar{Y}$.
+
+The form of $H^0$ is $J/N$, where $J$ is a matrix of all ones.
+
+The rows of $H^0$ are identical, so the rank of $H^0$ is 1.
+
+--
+
+Under the alternative model, we get the full predictor, $\hat{Y}$:
+
+$$
+\hat{Y} = \beta_0 + \beta_1X
+$$
+Because we assume i.i.d. variables, the $N$ $X$ are independent. The rank of 
+$H^a$ is $rank([1,X]) = 2$
+
+### Degrees of Freedom of Residuals and Regressions
+
+Three residual distributions are considered:
+
+$$
+\begin{aligned}
+SSR &= ||\hat{Y} - \bar{Y}||^2\\
+SSE &= ||Y - \hat{Y}||^2\\
+SST &= ||Y - \bar{Y}||^2
+\end{aligned}
+$$
+$SST$ is the sum of squared residuals of the null model. Expressed in terms of
+the solution matrix, $H^0$:
+
+$$
+\begin{aligned}
+Y - \bar{Y} &= (I - H^0)Y
+\end{aligned}
+$$
+$I$, $H^0$, and $I-H^0$ are idempotent, so we have
+
+$$
+\begin{aligned}
+rank(I-H^0) &= tr(I) - tr(H^0) \\
+&= rank(I) - rank(H^0) \\
+&= N - 1
+\end{aligned}
+$$
+
+The degrees of freedom of SST is N-1.
+
+--
+
+$SSE$ is the sum of squared residuals of the alternative model. Expressed in
+terms of the solution matrix:
+
+$$
+Y-\hat{Y} = (I - H^a)Y
+$$
+$I$, $H$, and $I-H^a$ are all idempotent, so we have 
+
+$$
+\begin{aligned}
+rank(I-H^a) &= tr(I) - tr(H^a) \\
+&= rank(I) - rank(H^a) \\
+&= N - 2
+\end{aligned}
+$$
+
+The degrees of freedom of SSE is $N - 2$.
+
+--
+
+SSR is the regression of $\hat{Y}_i$ onto $\bar{Y}$. Expressed in terms of a 
+solution matrix:
+
+$$
+\begin{aligned}
+\hat{Y}_i - \bar{Y} &= (H^a - H^0)Y\\
+&= (H^a + (I-I) - H^0)Y\\
+&= ((I+H^a) - I - H^0)Y
+\end{aligned}
+$$
+$H^a$, $H^0$, and $(I-H^0)$ are symmetric and idempotent. 
+
+$$
+\begin{aligned}
+rank((I+H^a) - I - H^0) &= tr(I) + tr(H^a) - rank(I-H^0)\\
+&= N + rank(H^a) - N - 1\\
+&= N +2 - N - 1\\
+&= 2-1\\
+&= 1
+\end{aligned}
+$$
+The degrees of freedom of SSR is 1.
+
+### SSR and SSE may be Chi-Squared
+
+Let's restate Cochran's Theorem.
+
+\begin{quote}
+If $N$ observations, $Y$, come from the same $N(\mu, \sigma^2)$, and SST is
+decomposed into $k$ $SS_r$, with degrees of freedom, $df_r$, then each 
+$SS_r/\sigma^2 \sim \chi^2(df_r)$ if $\Sigma_r^k df_r = N-1$.
+\end{quote}
+
+Under the null hypothesis, we have $Y \sim N(\mu, \sigma^2)$ as a consequence of
+$\varepsilon \sim N(\mu, \sigma^2)$. $SST$ is decomposed into $SSR$ and $SSE$,
+such that $df_r + df_e = N-1$.
+
+We conclude that, if the null hypothesis is not discharged, then 
+$SSE \sim \chi^2(N-2)$ and $SSR \sim \chi^2(1)$.
+
+### The ratio of MSR and MSE may form an F-distribution
+
+Recall that $MSR = SSR/df_r = SSR$, and $MSE = SSE/df_e = SSE/N-2$.
+
+If $SSR$ and $SSE$ are $\chi^2$-distributions, the ratio of $SSR/df_r/SSE/df_e$ 
+is an F-distribution.
