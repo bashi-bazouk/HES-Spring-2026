@@ -6,6 +6,9 @@ output:
     df_print: paged
   header-includes:
     - \usepackage{amsmath}
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
@@ -16,20 +19,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Problem 1
 
-Refer to the Crime rate data. A criminologist studying the relationship between 
-level of education-and crime rate in medium-sized U.S. counties collected the 
-following data for a random sample of 84 counties; X is the percentage of 
-individuals in the county having at least a high-school diploma, and Y is the 
-crime rate (crimes reported per 100,000 residents) last year. (100 points)
+Refer to the Crime rate data. A criminologist studying the relationship
+between level of education-and crime rate in medium-sized U.S. counties
+collected the following data for a random sample of 84 counties; X is
+the percentage of individuals in the county having at least a
+high-school diploma, and Y is the crime rate (crimes reported per
+100,000 residents) last year. (100 points)
 
 ```{R}
 set.seed(10)
 crime_rate_data <- read.csv("Crime Rate.csv")
 ```
 
-a-) Create train data set by selecting 70% of the data randomly and use the 
-remaining 30% of the data as a test data set (use set.seed(10) before selecting 
-the sample).
+a-) Create train data set by selecting 70% of the data randomly and use
+the remaining 30% of the data as a test data set (use set.seed(10)
+before selecting the sample).
 
 ```{r}
 popN = nrow(crime_rate_data)
@@ -43,6 +47,7 @@ testN = nrow(test)
 training_data = sample
 test_data = test
 ```
+
 **Use train data set to answer questions for part b to i**
 
 b-) \emph{Build a regression model to predict Y on the train data set. }
@@ -54,47 +59,47 @@ summary(linear_model)
 
 \emph{Comment on your model.}
 
-The p-value for the intercept is $0.000124 < 0.05$. This indicates that the
-intercept is statistically significant.
+The p-value for the intercept is $0.000124 < 0.05$. This indicates that
+the intercept is statistically significant.
 
 The p-value for the slope is $0.016051 < 0.05$. This indicates that the
 slope is statistically significant.
 
-The F-statistic is $6.165 >> 1$. We would reject the hypothesis that the slope
-is 0.
+The F-statistic is $6.165 >> 1$. We would reject the hypothesis that the
+slope is 0.
 
 \emph{Are there any outliers in the data set?}
 
-We can assess whether the errors are normally distributed by looking for 
-outliers in the residuals, typically, errors more than $2*\sigma$ are considered
-moderate outliers.
+We can assess whether the errors are normally distributed by looking for
+outliers in the residuals, typically, errors more than $2*\sigma$ are
+considered moderate outliers.
 
 ```{R}
 print(linear_model$residuals[linear_model$residuals / sigma(linear_model) > 2])
 ```
 
-A single outlier is identified. The rest of the residuals tend to fit a standard
-normal distribution.
+A single outlier is identified. The rest of the residuals tend to fit a
+standard normal distribution.
 
 \emph{Are there errors normally distributed?}
 
 ### Q-Q plot check for normally distributed residuals.
 
-We can look at the Q-Q plot of the residuals. If the residuals are normally
-distributed, they will fall into a straight line.
+We can look at the Q-Q plot of the residuals. If the residuals are
+normally distributed, they will fall into a straight line.
 
 ```{R}
 plot(linear_model, which = c(2))
 ```
 
-The residuals appear to deviate at the ends of the plot, suggesting they are
-not normally distributed.
+The residuals appear to deviate at the ends of the plot, suggesting they
+are not normally distributed.
 
 ### Shapiro Test for normally distributed residuals.
 
-We can run a Shapiro test to get a P-value. The null hypothesis is
-that the data follow the normal distribution. The alternative hypothesis is that
-the data do not follow the normal distribution.
+We can run a Shapiro test to get a P-value. The null hypothesis is that
+the data follow the normal distribution. The alternative hypothesis is
+that the data do not follow the normal distribution.
 
 ```{R}
 lm_res = linear_model$residuals
@@ -115,12 +120,12 @@ if (st$p.value > 0.05) {
 
 ### Kolmogorov-Smirnov Test for normally distributed residuals.
 
-We can run a Kolmogorov-Smirnov test to get a P-value. The null hypothesis is
-that the data follow the normal distribution. The alternative hypothesis is that
-the data do not follow the normal distribution.
+We can run a Kolmogorov-Smirnov test to get a P-value. The null
+hypothesis is that the data follow the normal distribution. The
+alternative hypothesis is that the data do not follow the normal
+distribution.
 
 ```{R}
-
 kst = ks.test(lm_res, "pnorm", mean(lm_res), sd(lm_res))
 kst
 ```
@@ -145,7 +150,6 @@ H_0: & \beta_1 = 0\\
 H_a: & \beta_1 \neq 0
 \end{aligned}
 $$
-
 
 ```{R}
 anova_table_constructor <- function(training_data) {
@@ -173,7 +177,7 @@ anova_table_constructor <- function(training_data) {
   return(anova_table)
 }
 
-
+# 
 
 mean_y = mean(training_data[,"Y"])
 
@@ -219,17 +223,17 @@ This is confirmed by the built-in ANOVA function:
 summary(aov(linear_model))
 ```
 
-d-) \emph{Carry out the test in part a by means of the T test.} 
+d-) \emph{Carry out the test in part a by means of the T test.}
 
 \emph{Is the P-value for the F test the same as that for the t test?}
 
 ### T-Test
 
-The Student's t-test and the one-sided F-test (with 1 numerator degree of 
-freedom) are equivalent when comparing two groups or testing a single regression 
-coefficient.
+The Student's t-test and the one-sided F-test (with 1 numerator degree
+of freedom) are equivalent when comparing two groups or testing a single
+regression coefficient.
 
-##
+## 
 
 $$
 F(1, df_d) = t^2(df_d)
@@ -240,7 +244,6 @@ The two-tailed T-Test and the one-tailed F-Test are related thusly:
 $$
 F_{0.95}(1, n-2) \cong t_{.975}(n-2)^2
 $$
-
 
 \emph{Show the numerical equivalence of the two test statistics and decision 
 rules.}
@@ -263,20 +266,21 @@ print(critical_t_squared - critical_f)
 
 The difference_between $(t^*)^2$ and $f^*$ is negligibly small.
 
-e-) \emph{By how much is the total variation in crime rate (Y) reduced when 
-percentage of high school graduates (X) is introduced into the analysis?} 
+e-)
+\emph{By how much is the total variation in crime rate (Y) reduced when 
+percentage of high school graduates (X) is introduced into the analysis?}
 
 ```{R}
 print(anova_table)
 ```
 
-The sum of squared residuals for the model without $X$ is 
+The sum of squared residuals for the model without $X$ is
 `r anova_table["Total", "S.S."]`.
 
-The sum of squared variation for the model with $X$ is 
+The sum of squared variation for the model with $X$ is
 `r anova_table["Error", "S.S."]`.
 
-The total variation is reduced by 
+The total variation is reduced by
 `r anova_table["Total", "S.S."] - anova_table["Error", "S.S."]`
 
 \emph{Is this a relatively large or small reduction?}
@@ -288,7 +292,8 @@ coeff = (SSE - SST) / SST
 percent_decrease = (1 - coeff) / 100
 ```
 
-This constitutes a reduction of `r percent_decrease`\%. This is significant.
+This constitutes a reduction of `r percent_decrease`%. This is
+significant.
 
 f-) \emph{State the full and reduced models.}
 
@@ -296,14 +301,15 @@ The full model is
 
 $$
 Y = \beta_0 + \beta_1 X + \varepsilon
-$$
-The reduced model is
+$$ The reduced model is
 
 $$
 Y = \beta_0 + \varepsilon
 $$
 
-g-) \begin{em} Obtain 
+g-)
+
+\begin{em} Obtain 
 \begin{enumerate}
 \item SSE(F), 
 \item SSE(R), 
@@ -314,22 +320,23 @@ g-) \begin{em} Obtain
 \end{enumerate}
 \end{em}
 
-These figures are equivalent to the figures in part B, and in the ANOVA table.
+These figures are equivalent to the figures in part B, and in the ANOVA
+table.
 
-```
+```         
 print(anova_table)
 ```
 
-$SSE(F)$ is equivalent to $SSE$. $SSE(R)$ is equivalent to $SST$. $dfF$ is
-equivalent to $DFE$. $dfR$ is equivalent to $DFT$.
+$SSE(F)$ is equivalent to $SSE$. $SSE(R)$ is equivalent to $SST$. $dfF$
+is equivalent to $DFE$. $dfR$ is equivalent to $DFT$.
 
 The test statistic $F*$ is `r qf(0.95,1, nrow(training_data)-2)`.
 
-The decision rule is to reject the null hypothesis if $SSR/MSE < F*$, else
-fail to reject.
+The decision rule is to reject the null hypothesis if $SSR/MSE < F*$,
+else fail to reject.
 
-h-) Are the test statistic F* and the decision rule for the general linear test 
-numerically equivalent to those in part b?
+h-) Are the test statistic F\* and the decision rule for the general
+linear test numerically equivalent to those in part b?
 
 Yes.
 
@@ -338,27 +345,82 @@ i-) Evaluate model performance and stability on the train data set.
 Let's run it over a bunch of samples.
 
 ```{r}
-RUNS = 2
-run_data = data.frame()
+RUNS = 250
+run_data = list()
 for (i in 1:RUNS) {
   idx_training_data = sample(popN, size = alphaN, replace=FALSE)
   training_data = crime_rate_data[idx_training_data,]
   test_data = crime_rate_data[-idx_training_data,]
   
   # Run Models
-  linear_model = lm(Y ~ X, training_data)
-  anova_model = anova(linear_model)
-  print("### LM AND AOV.SUMMARY")
-  if (i==1) {
-    summary(linear_model)
-    summary(anova_model)
-  }
-  
-  # Collect MSR, MSE
-  run_data = rbind(run_data, t(c(""))) 
+  anova_table = anova_table_constructor(training_data)
+  run_data[[i]] = data.frame(
+      MSR=anova_table["Regression", "M.S.S."],
+      MSE=anova_table["Error", "M.S.S."]
+    )
 }
+run_data = do.call(rbind, run_data)
+
+msr_chi_square_test = chisq.test(run_data$MSR)
+msr_chi_square_residuals = msr_chi_square_test$residuals
+plot(msr_chi_square_residuals, main="MSR Chi Square Residuals")
+print(msr_chi_square_test)
+
+mse_chi_square_test = chisq.test(run_data$MSE)
+mse_chi_square_residuals = mse_chi_square_test$residuals
+plot(mse_chi_square_residuals, main="MSE Chi Square Residuals")
+print(mse_chi_square_test)
 ```
+
+You would expect the MSR and MSE of each sample, taken over multiple samples, to
+form a chi-square distribution. The chi-square tests have p values on the order
+of 10^{-16}, sufficient to discharge the null hypothesis.
+
+The plots of the best-fit chi-square residuals seem evenly distributed, don't
+show any non-linear effects.
 
 **Use test data set below**
 
-j-) Evaluate model performance and stability on the test set and compare it to the training set. Comment on your findings? (20 points)
+j-) Evaluate model performance and stability on the test set and compare
+it to the training set. Comment on your findings? (20 points)
+
+```{R}
+RUNS = 250
+run_data = list()
+for (i in 1:RUNS) {
+  idx_training_data = sample(popN, size = alphaN, replace=FALSE)
+  training_data = crime_rate_data[idx_training_data,]
+  test_data = crime_rate_data[-idx_training_data,]
+  
+  # Run Models
+  training_anova_table = anova_table_constructor(training_data)
+  test_anova_table = anova_table_constructor(test_data)
+  run_data[[i]] = data.frame(
+      trainingMSR=training_anova_table["Regression", "M.S.S."],
+      trainingMSE=training_anova_table["Error", "M.S.S."],
+      testMSR=test_anova_table["Regression", "M.S.S."],
+      testMSE=test_anova_table["Error", "M.S.S."]
+    )
+}
+run_data = do.call(rbind, run_data)
+
+training_mse_chi_square_test = chisq.test(run_data$trainingMSE)
+training_mse_chi_square_residuals = training_mse_chi_square_test$residuals
+test_mse_chi_square_test = chisq.test(run_data$trainingMSE)
+test_mse_chi_square_residuals = test_mse_chi_square_test$residuals
+plot(training_mse_chi_square_residuals, test_mse_chi_square_residuals, main="Training vs Test MSE Chi Square Residuals")
+abline(0,1)
+
+
+training_msr_chi_square_test = chisq.test(run_data$trainingMSE)
+training_msr_chi_square_residuals = training_msr_chi_square_test$residuals
+test_msr_chi_square_test = chisq.test(run_data$trainingMSE)
+test_msr_chi_square_residuals = test_msr_chi_square_test$residuals
+plot(training_msr_chi_square_residuals, test_msr_chi_square_residuals, main="Training vs Test MSR Chi Square Residuals")
+abline(0,1)
+
+```
+
+The scatterplots of MSE and MSR residuals between samples and tests are remarkably
+correlated. Perhaps they even have a correlation of 1 (This could be due to an 
+error in implementation).
