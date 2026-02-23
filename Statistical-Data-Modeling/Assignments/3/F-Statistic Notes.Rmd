@@ -169,3 +169,40 @@ Recall that $MSR = SSR/df_r = SSR$, and $MSE = SSE/df_e = SSE/N-2$.
 
 If $SSR$ and $SSE$ are $\chi^2$-distributions, the ratio of $SSR/df_r/SSE/df_e$ 
 is an F-distribution.
+
+### Establishing the fitness of the model.
+
+If a model has non-linear effects in its residuals, it can be caused by a number
+of integral failures, either in the distribution of data, or the estimation of
+the parameters of a model/predictor. 
+
+If a data analysis shows unpredictable non-linear effects over all sets of data,
+the model may be unfit, or in need of improvement.
+
+
+
+
+
+### Two problems of Mathematical Statistics that contribute to the F distribution.
+
+1. Estimation at a point.
+
+2. Assessing the fitness of models.
+
+In the estimation of a point statistic, such as probability density, probability
+mass, cumulative probability mass, and expectation, models become predictors.
+
+A predictor differs from a model in the consideration it gives to the predictor
+variables, versus the model parameters of the model. The predictor is written
+P(y|x). Leaving the predictor's model parameters, \theta, implicit, accomplishes
+two goals:
+
+1. Establishes to the audience that we are talking about classes of machines: 
+Data Processors. 
+2. Establishes that the machines, for now, do not have knobs on them. 
+Furthermore, that there are no such parameters available to the implementation
+of P. It may function on some given standard form, like Sum of Squares 
+
+In teaching, the predictor's form is kept abstract; in practice, there
+are always parameter
+
