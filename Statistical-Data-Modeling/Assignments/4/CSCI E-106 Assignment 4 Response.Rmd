@@ -1,0 +1,408 @@
+---
+title: 'CSCI E-106:Assignment 4'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressPackageStartupMessages(library(lmtest))
+library(MASS)
+```
+
+### Due Date: February 27, 2026 at 11:59 pm EST
+
+
+## Problem 1
+
+\emph{Refer to Sales growth Data.}
+
+```{R}
+set.seed(1023)
+sales_growth_data <- read.csv("Sales Growth Data.csv")
+data = sales_growth_data
+```
+
+a-) \emph{Divide the range of the predictor variable (coded years) into five 
+bands of width 2.0, as follows: Band 1 ranges from X = -.5 to X = 1.5; band 2 
+ranges from X = 1.5 to X = 3.5; and so on. Determine the median value of X and 
+the median value of Y in each band and develop the band smooth by connecting the 
+five pairs of medians by straight lines on a scatter plot of the data.}  
+
+```{R}
+getMedians <- function(data, width, startX) {
+  endX = startX + width
+  selection = data[data$X > startX & data$X < endX,]
+  return(c(X=median(selection$X), Y=median(selection$Y)))
+}
+
+par(mfrow=c(1,1))
+plot(data$X, data$Y)
+
+medians = getMedians(data,2,-0.5)
+for(i in 1:4) {
+  nextMedians = getMedians(data,2,-0.5+2*i)
+  segments(medians[["X"]], medians[["Y"]], nextMedians[["X"]], nextMedians[["Y"]])
+  medians = nextMedians
+}
+
+```
+
+\emph{Does the band smooth suggest that the regression relation is linear?
+Discuss.}
+
+The regresssion relation for this data is clearly linear. Generally, there are
+examples of non-linear data that would have band smooth. For instance, high 
+frequency changes in $Y$ will be smooth for some band widths and jagged for
+others. Data with concentrated values can appear to have medians higher or lower
+than the means, which can smooth or unsmooth the connections.
+
+Data that is linear may tend in general to have band smooth.
+
+b-) \emph{Create a series of seven overlapping neighborhoods of width 3.0 
+beginning at X = -.5. The first neighborhood will range from X = -.5 to X = 2.5; 
+the second neighborhood will range from X = .5 to X = 3.5; and so on. For each 
+of the seven overlapping neighborhoods, fit a linear regression function and 
+obtain the fitted value $\hat{Y_{c}}$ at the center $X_{c}$ of the neighborhood. 
+Develop a simplified version of the lowess smooth by connecting the seven 
+($X_c$, $\hat{Y_{c}}$) pairs by straight lines on a scatter plot of the data.}
+
+```{R}
+plotB = function(data) {
+  getCenter <- function(data, width, startX) {
+    midX = startX + (width/2)
+    endX = startX + width
+    selection = data[data$X > startX & data$X < endX,]
+    
+    selectionFit = lm(Y~X, selection)
+    res = data.frame(X=c(midX))
+    res$Y = predict(selectionFit, res)
+    return(res)
+  }
+  
+  plot(data$X, data$Y)
+  
+  center = getCenter(data, 3, -0.5)
+  for(i in 1:6) {
+    nextCenter = getCenter(data, 3, -0.5 + i)
+    segments(center[["X"]], center[["Y"]], nextCenter[["X"]], nextCenter[["Y"]])
+    center = nextCenter
+  }
+}
+```
+
+c-) \emph{Obtain the 95 percent confidence band for the true regression line and
+plot it on the plot prepared in part}
+
+```{R}
+lm_ = lm(Y~X, data)
+ci = data.frame(X=c(min(data$X), max(data$X)))
+ci = cbind(ci, predict(lm_, ci, interval="confidence"))
+
+plotB(data)
+segments(ci[1,"X"], ci[1,"lwr"], ci[2,"X"], ci[2,"lwr"])
+segments(ci[1,"X"], ci[1,"upr"], ci[2,"X"], ci[2,"upr"])
+```
+
+(b). \emph{Does the simplified lowess smooth fall entirely within the confidence 
+band for the regression line?}
+
+Yes.
+
+\emph{What does this tell you about the appropriateness of the linear regression 
+function?}
+
+Because the simplified loess smooth is a closer fit to the data, it would tend
+to exceed the confidence band for data that doesn't follow a linear regression.
+That the simplified loess smooth falls inside of the confidence band of the
+linear regression indicates that the linear regression matches the closer fit,
+that the closer fit is close to linear, and therefore the linear regression is
+a good fit for the data.
+
+## Problem 2
+
+Using the ozone data under faraway library,if you are using the R Studio, please use the command below to download the data:
+```{R}
+library(faraway)
+data(ozone,package="faraway")
+data = ozone
+```
+
+\emph{Use O3 as the response and temp, humidity and ibh as predictors to answer 
+the questions below.}
+
+```{R}
+data = data[, c("O3", "temp", "humidity", "ibh")]
+k = 3
+```
+
+a-) \emph{Create train and test data sets. Use 70% of the data for train data 
+set and use remaining data (30% of data) for test data set (use 
+set.seed(1023)).}
+
+```{R}
+popN = nrow(data)
+alphaN =7/10*popN
+idx_train = sample(popN, size = alphaN, replace=FALSE)
+train = data[idx_train,]
+trainN = nrow(train)
+test = data[-idx_train,]
+testN = nrow(test)
+```
+
+b-) \emph{Build a regression model to predict O3 on the train data set. Write 
+down the regression model and comment on the model performance.}
+
+```{R}
+lm_ = lm(O3 ~ ., data)
+lm_summary = summary(lm_)
+print(lm_summary)
+```
+
+The P-values are all significantly less than 0.05.
+
+c-) \emph{Visually by using the graphs, comments on regression model 
+assumptions.}
+
+```{R}
+par(mfrow=c(1,2))
+plot(lm_, which=c(1,3))
+```
+The residuals increase toward the higher extrema. The residuals are unevenly 
+distributed at the lower extreme. 
+
+```{R}
+plot(lm_, which=2)
+```
+The Q-Q plot has deviation at the ends.
+
+d-) \emph{Test the model performance on the test data and comment on model 
+stability and performance.}
+
+```{R}
+predictTest <-predict(lm_, test)
+modelTest <- cbind(predictTest, test)
+testResiduals = modelTest$O3 - modelTest$predictTest
+dimE = testN - k - 1
+
+sst = sum((modelTest$O3-mean(modelTest$O3))^2)
+sse = sum(testResiduals^2)
+ssr = sum((modelTest$predictTest - mean(modelTest$O3))^2)
+
+mse = sse/dimE
+rse = sqrt(mse)
+rmse = sqrt(sse/length(testResiduals))
+rSquared = 1.0 - (sse/sst)
+mae = sum(testResiduals)/length(testResiduals)
+
+model_summary = data.frame(MSE=c(mse), RSE=rse, RMSE=c(rmse), 
+                           Rsquared=c(rSquared), MAE=c(mae))
+print(model_summary)
+```
+
+The $R^2$ in the training set was `r round(lm_summary$r.squared, 3)`. 
+In the test it is `r round(model_summary$Rsquared, 3)`.
+
+e-) \emph{Perform Breusch-Pagan Test, write down null and alternative hypotheses 
+and your conclusion.}
+
+$H_0$: The error variances in the regression residuals are homoscedastic.
+
+$H_a$: The error variances in the regression residuals are heteroscedastic.
+
+```{R}
+bptest(lm_)
+```
+
+In the linear model, the p-value is small, so we accept the alternative 
+hypothesis. The residual variances are heteroscedastic.
+
+
+f-) \emph{Use the Box–Cox method to determine the best transformation on the 
+response.}
+
+```{R}
+bc_model = MASS::boxcox(lm_, plotit=TRUE)
+lambda_bc = bc_model$x[which.max(bc_model$y)]
+```
+
+The critical lambda value is at `r round(lambda_bc, 3)`. 
+
+```{R}
+train$O3_bc = (train$O3^lambda_bc-1)/lambda_bc
+lm_bc_ = lm(O3_bc ~ . - O3, train)
+lm_bc_summary = summary(lm_bc_)
+print(lm_bc_summary)
+```
+
+The $R2$ in the original training set was 0.684. In the transformed data it is
+`r round(lm_bc_summary$r.squared, 3)`.
+
+\emph{If transformation is needed, perform the transformation and rebuild 
+the model on the train data and check the model stability on the test data set.}
+
+```{R}
+predictTest <- (lambda_bc * predict(lm_bc_, test) + 1)^(1/lambda_bc)
+modelTest <- cbind(predictTest, test)
+testResiduals = modelTest$O3 - modelTest$predictTest
+dimE = testN - k - 1
+
+sst = sum((modelTest$O3-mean(modelTest$O3))^2)
+sse = sum(testResiduals^2)
+ssr = sum((modelTest$predictTest - mean(modelTest$O3))^2)
+
+mse = sse/dimE
+rse = sqrt(mse)
+rmse = sqrt(sse/length(testResiduals))
+rSquared = 1.0 - (sse/sst)
+mae = sum(testResiduals)/length(testResiduals)
+
+model_summary = data.frame(MSE=c(mse), RSE=rse, RMSE=c(rmse), 
+                           Rsquared=c(rSquared), MAE=c(mae))
+print(model_summary)
+```
+
+In the transformed training data, $R^2$ is
+`r round(lm_bc_summary$r.squared, 3)`.
+
+In the transformed test data, $R^2$ is
+`r round(model_summary$Rsquared, 3)`.
+
+```{R}
+plot(testResiduals)
+```
+
+## Problem 3
+
+\emph{Using the teengamb data under faraway library,if you are using the R 
+Studio, please use the command below to download the data:}
+```{r}
+library(faraway)
+data(teengamb, package="faraway")
+```
+
+a-) \emph{Fit a model with gamble as the response and the other variables as predictors.}
+
+```{R}
+lm_ = lm(gamble ~ ., teengamb)
+lm_summary = summary(lm_)
+print(lm_summary)
+par(mfrow=c(2,2))
+plot(lm_)
+```
+
+```{R}
+par(mfrow=c(1,1))
+predictors = c("status", "income", "verbal")
+for (predictor in predictors) {
+  plot(teengamb[,predictor], teengamb[,"gamble"], main=paste(predictor, " vs gamble"), xlab=predictor, ylab="gamble")
+  abline(lm_$coefficients[["(Intercept)"]], lm_$coefficients[[predictor]])
+}
+```
+
+\emph{Using the graphs, comment on the regression model and assumptions.}
+From the residual and sqrt residual plots, you can see there is a difference in
+variability from the low extreme, increasing at higher observed values. There is
+a higher concentration of data at the low extreme.
+
+The Q-Q Residuals plot has deviation at the ends. Points 24, 36, and 39, seem
+like outliers.
+
+From the plot of leverage, you can see that some data points have high leverage.
+
+The model seems to be heteroscedastic.
+
+b-) \emph{Predict the data(teengamb) amount that a male with average (given 
+these data) status, income and verbal score would gamble along with an 
+appropriate 95\% CI.}
+
+```{R}
+mean_male_data = data.frame(
+  sex=c(0), 
+  status=mean(teengamb$status), 
+  income=mean(teengamb$income), 
+  verbal=mean(teengamb$verbal))
+mean_predictions = predict(lm_, mean_male_data, interval="confidence")
+print(mean_predictions)
+```
+
+c-) \emph{Repeat the prediction for a male with maximal values (for this data) 
+of status, income and verbal score.}
+
+```{R}
+max_male_data = data.frame(
+  sex=c(0), 
+  status=max(teengamb$status), 
+  income=max(teengamb$income), 
+  verbal=max(teengamb$verbal))
+max_predictions = predict(lm_, max_male_data, interval="confidence")
+print(max_predictions)
+```
+
+\emph{Which CI is wider and why is this result expected?}
+
+The confidence interval for maximal values is wider. This would be expected,
+because a) the variance of the residuals increases at the upper extrema b)
+variability of predictions tends to increase as you move away from the center
+of the data.
+
+d-) \emph{Fit a model with $\sqrt{gamble}$ as the response but with the same 
+predictors.}
+
+```{R}
+teengamb_sqrt = cbind(
+  gamble_sqrt=sqrt(teengamb$gamble), 
+  teengamb[,names(teengamb) != "gamble"]
+)
+
+lm_sqrt_ = lm(gamble_sqrt ~ ., teengamb_sqrt)
+summary(lm_sqrt_)
+```
+
+\emph{Now predict the response and give a 95\% prediction interval for the 
+individual in (a). Take care to give your answer in the original units of the 
+response.}
+
+```{R}
+mean_sqrt_predictions = predict(lm_sqrt_, mean_male_data, interval="confidence")
+print(mean_sqrt_predictions^2)
+```
+
+```{R}
+max_sqrt_predictions = predict(lm_sqrt_, max_male_data, interval="confidence")
+print(max_sqrt_predictions^2)
+```
+
+e-) \emph{Repeat the prediction for the model in (d) for a female with 
+status=20, income=1, verbal = 10.}
+
+```{R}
+specific_female_data = data.frame(
+  sex=1,
+  status=20,
+  income=1,
+  verbal = 10
+)
+specific_sqrt_predictions = predict(lm_sqrt_, specific_female_data, interval="confidence")
+print(specific_sqrt_predictions^2)
+```
+
+```{R}
+par(mfrow=c(1,1))
+predictors = c("status", "income", "verbal")
+for (predictor in predictors) {
+  plot(teengamb_sqrt[,predictor], teengamb_sqrt[,"gamble_sqrt"], main=paste(predictor, " vs gamble"), xlab=predictor, ylab="gamble")
+  abline(lm_sqrt_$coefficients[["(Intercept)"]], lm_sqrt_$coefficients[[predictor]])
+  points(specific_female_data[,predictor], specific_sqrt_predictions[,"fit"]^2, col="red")
+}
+```
+
+\emph{Comment on the credibility of the result.}
+
+We see from Question 1 that looking at bands can 
+
+The predicted point seems to fall in the confidence interval of each of the 
+plots. The most important predictor is income, and the prediction is taking 
+place near the center of the income data.
