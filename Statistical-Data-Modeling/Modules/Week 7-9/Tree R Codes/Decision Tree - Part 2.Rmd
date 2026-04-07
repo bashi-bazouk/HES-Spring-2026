@@ -1,0 +1,152 @@
+---
+title: "Decision Tree Part 2"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(error = TRUE)
+```
+# Decision Trees
+## Fitting Classification Trees
+
+
+The `tree` library is used to construct classification and regression trees.
+
+```{r chunk1}
+library(tree)
+```
+
+We first use classification trees  to analyze the `Carseats` data set.
+In these data, `Sales` is a continuous variable, and so we begin by recoding it  as a binary variable. We use the `ifelse()` function to create a variable, called `High`, which takes on a value of `Yes` if the `Sales` variable exceeds $8$,
+and takes on a value of `No` otherwise.
+
+```{r chunk2}
+library(ISLR2)
+attach(Carseats)
+High <- factor(ifelse(Sales <= 8, "No", "Yes"))
+```
+
+Finally, we use the `data.frame()` function to merge `High` with the rest of the `Carseats` data.
+
+```{r chunk3}
+Carseats <- data.frame(Carseats, High)
+```
+
+We now  use the `tree()` function to fit a classification tree in order to predict `High` using all variables but `Sales`.
+The syntax of the `tree()` function is quite similar to that of the `lm()` function.
+
+```{r chunk4}
+tree.carseats <- tree(High ~ . - Sales, Carseats)
+```
+
+The `summary()` function lists the variables that are used as internal nodes in the tree, the number of terminal nodes, and the (training) error rate.
+
+```{r chunk5}
+summary(tree.carseats)
+```
+
+We see that the training error rate is  $9\%$. A small deviance indicates a tree that provides a good fit to the (training) data.
+The *residual mean deviance* reported is simply the deviance divided by $n-|{T}_0|$, which in this case is $400-27=373$.
+
+One of the most attractive properties of trees is that they can be  graphically displayed. We use the `plot()` function to display the tree structure, and the `text()` function to display the node labels. The argument `pretty = 0` instructs `R` to include the category names for any qualitative predictors, rather than simply displaying a letter for each category.
+
+```{r chunk6}
+plot(tree.carseats)
+text(tree.carseats, pretty = 0)
+```
+
+The most important indicator of `Sales` appears to be shelving location, since the first branch differentiates `Good` locations from `Bad` and `Medium` locations.
+
+If we just type the name of the tree object,  `R` prints output corresponding to each branch of the tree. `R` displays the split criterion  (e.g. `Price < 92.5`), the number of observations in  that branch, the deviance,  the overall prediction for the branch (`Yes` or `No`),  and the fraction of observations in that branch that take on values of `Yes` and `No`. Branches that lead to terminal nodes are indicated using asterisks.
+
+```{r chunk7}
+tree.carseats
+```
+
+
+In order to properly evaluate the performance of a classification tree
+on these data, we must estimate the test error rather than simply
+computing the training error. We split the observations into a
+training set and a test set, build the tree using the training set,
+and evaluate its performance on the test data. The `predict()`
+function can be used for this purpose. In the case of a classification
+tree, the argument `type = "class"` instructs `R` to return the
+actual class prediction. This approach leads to correct predictions
+for around $77 \%$ of the locations in the test data set.
+
+```{r chunk8}
+set.seed(2)
+train <- sample(1:nrow(Carseats), 200)
+Carseats.test <- Carseats[-train, ]
+High.test <- High[-train]
+tree.carseats <- tree(High ~ . - Sales, Carseats,
+    subset = train)
+tree.pred <- predict(tree.carseats, Carseats.test,
+    type = "class")
+table(tree.pred, High.test)
+(104 + 50) / 200
+#confusion Matrix
+library(caret)
+confusion_matrix <- confusionMatrix(as.factor(tree.pred),as.factor(Carseats.test$High),mode="prec_recall", positive = "Yes")
+confusion_matrix
+```
+
+(If you re-run the `predict()` function then you might get slightly different results, due to "ties": for instance, this can happen when the training observations corresponding to a terminal node are evenly split between `Yes` and `No` response values.)
+
+Next, we consider whether pruning the tree might lead to improved  results.
+The function `cv.tree()` performs cross-validation in order to  determine the optimal level of tree complexity; cost complexity pruning is used in order to select a sequence of trees for consideration.
+We use the argument `FUN = prune.misclass` in order to indicate that we want the classification error rate to guide the cross-validation and pruning process, rather than the default for the `cv.tree()` function, which is deviance. The `cv.tree()` function reports the number of terminal nodes of each tree considered (`size`) as well as the corresponding error rate and the value of the cost-complexity parameter used in the function.
+
+```{r chunk9}
+set.seed(7)
+cv.carseats <- cv.tree(tree.carseats, FUN = prune.misclass)
+names(cv.carseats)
+cv.carseats
+```
+
+Despite its name, `dev` corresponds to the number of
+cross-validation errors. The tree with 9 terminal nodes results in only 74 cross-validation errors.  We plot
+the  error rate as a function of both `size` and `k`.
+
+```{r chunk10}
+par(mfrow = c(1, 2))
+plot(cv.carseats$size, cv.carseats$dev, type = "b")
+plot(cv.carseats$k, cv.carseats$dev, type = "b")
+```
+
+We now apply the  `prune.misclass()`  function in order to prune the tree to obtain the nine-node tree.
+
+```{r chunk11}
+prune.carseats <- prune.misclass(tree.carseats, best = 9)
+plot(prune.carseats)
+text(prune.carseats, pretty = 0)
+```
+
+
+How well does this pruned tree perform on the test data set? Once again, we apply the `predict()` function.
+
+```{r chunk12}
+tree.pred <- predict(prune.carseats, Carseats.test,type = "class")
+table(tree.pred, High.test)
+(97 + 58) / 200
+confusion_matrix <- confusionMatrix(as.factor(tree.pred),as.factor(Carseats.test$High),mode="prec_recall", positive = "Yes")
+confusion_matrix
+```
+
+Now $77.5 \%$ of the test observations are correctly classified, so not only has the pruning process produced a more interpretable tree, but it has also slightly improved the classification accuracy.
+
+If we increase the value of `best`, we obtain a larger pruned tree with lower classification accuracy:
+
+```{r chunk13}
+prune.carseats <- prune.misclass(tree.carseats, best = 14)
+plot(prune.carseats)
+text(prune.carseats, pretty = 0)
+tree.pred <- predict(prune.carseats, Carseats.test,type = "class")
+table(tree.pred, High.test)
+(102 + 52) / 200
+confusion_matrix <- confusionMatrix(as.factor(tree.pred),as.factor(Carseats.test$High),mode="prec_recall", positive = "Yes")
+confusion_matrix
+```
+

@@ -1,0 +1,139 @@
+---
+title: "Cross Validation"
+author: "Hakan Gogtas"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Cross Validation
+
+Cross-validation is a model evaluation technique generally used to evaluate a machine learning algorithm's performance in making predictions on new datasets that it has not been trained on. In fact, it is not advisable to compare the predictive accuracy of a set of models using the same observations as used for model estimation. Therefore, to evaluate the predictive performance of the models, we must use an independent set of data.
+
+In the cross-validation procedure, a dataset partitions a subset of data used to train the algorithm, and the remaining data is used for testing. Subdivision is usually randomly performed to ensure that the two parts have the same distribution. Because cross-validation does not use all of the data to build a model, it is a commonly used method to detect overfitting during training. 
+
+## 70-30 Split
+
+In cross-validation, each round involves randomly partitioning the original dataset into a training set and a testing set. The training set is then used to train a regression  algorithm, and the testing set is used to evaluate its performance. So, the model is fit on the training set, and the fitted model is used to predict the responses for the observations in the testing set. This process is repeated several times, and the average cross-validation error is used as a performance indicator. The model showing the lowest error on the test set is identified as the best.
+
+Several cross-validation techniques are available. The following lists the most used:
+
+## k-fold: This technique subdivides data into k randomly chosen subsets (named folds) of roughly equal sizes. One subset is used to validate the model, while the remaining subsets are used for training. This process is repeated k times, such that each subset is used exactly once for validation.
+
+## Leave-one-out cross-validation (LOOCV): This technique subdivides data using the k-fold approach, where k is equal to the total number of observations in the data. This time, a single observation is used for the testing set, and the remaining observations make up the training set.
+
+In addition, two more resampling methods are available:
+
+## Data splitting: This technique subdivides into exactly two subsets of specified ratios for training and validation.
+
+## Bootstrap resampling: This techniques creates bootstrap samples by randomly collecting observations from the original dataset with replacements against which to evaluate the model. Typically, a large number of resampling iterations are performed.
+
+To improve our practice with the cross-validation techniques, we look at an example. This time, we will use the Motor Trend Car Road Tests dataset (mtcars) contained in the datasets package. The data was extracted from the 1974 Motor Trend US magazine and comprises fuel consumption and ten aspects of automobile design and performance for 32 automobiles (1973–74 models).
+The data consists of 32 observations on 11 variables, as follows:
+
+Mpg: Miles/(US) gallon
+cyl: Number of cylinders
+disp: Displacement (cu.in.)
+hp: Gross horsepower
+drat: Rear axle ratio
+wt: Weight (1000 lbs)
+qsec: 1/4 mile time
+vs: V/S
+am: Transmission (0 = automatic, 1 = manual)
+gear: Number of forward gears
+carb: Number of carburetors
+
+Let's start by loading the mtcars dataset through the following command which, as we anticipated, is contained in the dataset's library and saves it in a given frame:
+```{r}
+library(caret)
+data(mtcars)
+str(mtcars)
+summary(mtcars)
+R<-round(cor(mtcars),2)
+R
+```
+The correlation coefficient has to be between –1.0 and 1.0 (0= no correlation; -1/1=high negative/positive correlation).  We notice that the mpg variable is largely correlated with the variables wt, cyl, and disp. We will confirm this in the subsequent analyzes. 
+
+The following example divides the dataset so that 70 percent is used to train a linear regression model and the remaining 30 percent is used to evaluate model performance. To perform data splitting, we can use the createDataPartition() function (contained in the caret package) that returns a list or matrix of row position integers corresponding to the training data. For bootstrap samples, simple random sampling is used. For other data splitting, the random sampling is done within the levels of y, when y is a factor, in an attempt to balance the class distributions within the splits. For numeric y, the sample is split into groups based on percentiles, and sampling is done within these subgroups. The general form of the function is shown in the following:
+
+```{r}
+DataSplit<-createDataPartition(y = mtcars$mpg, p = 0.7, list = FALSE)
+TrainData<-mtcars[DataSplit,]
+TestData<-mtcars[-DataSplit,]
+
+```
+In these two lines, the data of the data frame named mtcars is subdivided into two new data frames, called Train Data and Test Data. Now we can build the model: to do this, we will use the train() function. This function can be used to estimate the coefficient values for various modeling functions, like regression, and others. This function sets up a grid of tuning parameters, and can also compute resampling based performance measures. Let's see how it works:
+
+```{r}
+LmFit1<-train(mpg~., data = TrainData, method = "lm")
+f<-lm(mpg~., data = TrainData)
+```
+
+A string specifying which regression model to adopt has been used (in our case, lm). Possible values are found using a names (getModelInfo()) command. To look at the model, let's see a brief summary using the summary() function:
+
+```{r}
+summary(LmFit1)
+summary(f)
+```
+
+A linear regression model that uses the least squares approach to determine optimal parameters for the given data has been returned. Now, a test must be performed on the Test Data or other new data using parameter estimates obtained from the model building process. The following shows how the testing activity is performed on the Test Data sample using the coefficients obtained from the model built on the Train Data sample. This step can be easily implemented with the help of the predict() function. This function is a generic function for predictions from the results of various model fitting functions. The function invokes particular methods, which depend on the class of the first argument:
+
+```{r}
+PredictedTest<-predict(LmFit1,TestData)
+```
+
+At this point, we have to build data.frame with the values of the current and estimated mpg variable to compare them:
+
+```{r}
+ModelTest1<-data.frame(obs = TestData$mpg, pred=PredictedTest)
+```
+
+
+To see model performance metrics on the TestData sample, you can use a defaultSummary() function that, given two numeric vectors of data, calculates the mean squared error (MSE) and R-squared. For two factors, the overall agreement rate and kappa are determined:
+defaultSummary(ModelTest1)
+
+This example returns the values of the RMSE and metrics:
+```{r}
+defaultSummary(ModelTest1)
+```
+Let's try with another cross-validation method. In this case, we will adopt the k-fold technique that subdivides data into randomly selected subsets (named folds) of roughly equal sizes. One subset is used to validate the model, while the remaining subsets are used to train the model. This process is repeated k times, such that each subset is used exactly once for validation. The k-fold is a robust method for estimating accuracy, and the size of k and to tune the amount of bias in the estimate. k values are, in general, set to three, five, seven and ten. To perform the k-fold cross-validation technique, just use the train() function as follows:
+
+```{r}
+Control1<-trainControl(method = "cv",number = 10)
+LmFit2<-train(mpg ~ ., data = mtcars, method = "lm",trControl = Control1,metric="Rsquared")
+```
+
+The first line is used for setting the method adopted. To do this, the trainControl() function is used to control the computational methods of the train() function. In the trainControl function, the cv method is used (that means k-fold cross-validation), and the number of folds is set to 10. Then, the train() function is used to build a regression model with the k-fold cross-validation technique. Let's see a brief summary using the summary function:
+```{r}
+summary(LmFit2)
+PredictedTest2<-predict(LmFit2,mtcars)
+ModelTest2<-data.frame(obs = mtcars$mpg, pred=PredictedTest2)
+defaultSummary(ModelTest2)
+```
+Let's deal with another cross-validation method, LOOCV. This technique subdivides data using the k-fold approach, where k is equal to the total number of observations in the data. This time, a single observation is used for the testing set, and the remaining observations make up the training set.
+
+The procedure is similar to that seen for the previous case. Again, we will use the trainControl() function to control the computable methods of the train() function, and then use the train () function to build a regression model:
+```{r}
+Control2<-trainControl(method="LOOCV")
+LmFit3<-train(mpg ~ ., data = mtcars, method = "lm", trControl = Control2)
+summary(LmFit3)
+```
+In the caret package, a method for computation of variable importance for regression models is also available. This is the varImp() function that computes the variable's importance for objects produced by the train() function. So, we calculate the relative importance of variables for the last model:
+
+```{r}
+varImp(LmFit3)
+plot(varImp(LmFit3))
+```
+Finally, the bootstrap resampling method is used. This technique creates bootstrap samples by randomly collecting observations from the original dataset with replacements against which to evaluate the model. Typically, a large number of resampling iterations are performed:
+```{r}
+Control3<-trainControl(method="boot", number=100)
+LmFit4<-train(mpg ~ ., data = mtcars, method = "lm", trControl = Control3)
+summary(LmFit4)
+PredictedTest4<-predict(LmFit4,mtcars)
+ModelTest4<-data.frame(obs = mtcars$mpg, pred=PredictedTest4)
+defaultSummary(ModelTest4)
+```
+
+

@@ -1,0 +1,279 @@
+---
+title: 'CSCI E-106:Assignment 5'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressPackageStartupMessages(library(lmtest))
+library(MASS)
+library(car)
+set.seed(1023)
+```
+
+### Brian Ledger
+
+## Problem 1 
+
+\textbf{Refer to the CDI data set. The number of active physicians (Y) is to be regressed against total population , total personal income, land area and geographic region  ("Geographic region classification is that used by the U.S. Bureau of the Census, where: 1 = NE, 2 = NC, S = 3, W=4")}
+
+```{R}
+cdi_data = read.csv("CDI Data.csv")[,c(
+  "Number.of.active.physicians",
+  "Total.population",
+  "Total.personal.income",
+  "Land.area",
+  "Geographic.region"
+  )]
+tail(cdi_data)
+```
+
+a-) \textbf{Create Dummy variables for Geographic Region.}
+
+```{R}
+cdi_data$Geographic.region = factor(
+  cdi_data$Geographic.region,
+  c(2,3,4,1),
+  c(".NC", ".S", ".W", ".NE"),
+  )
+```
+
+b-) \textbf{Fit a regression model by using all variables above.}
+
+We'll make regressions with and without geographic region.
+```{R}
+summary(lm(Number.of.active.physicians ~ . -Geographic.region, cdi_data))
+```
+
+```{R}
+cdi_lm = lm(Number.of.active.physicians ~ ., cdi_data)
+summary(cdi_lm)
+```
+
+\textbf{Comment on your model.}
+
+The coefficients of determination are more or less equal.
+
+None of the geographic region have a significant p-value (at $\alpha=0.5$). We
+would assess that there is no relationship between geographic region and number 
+of active physicians.
+
+The intercept doesn't have a significant p-value. We would assess that the
+number of active physicians wouldn't be significantly different from zero if all
+variables were zero. This scenario is non-sense in the context of land area,
+population, etc.
+
+c-) \textbf{Test whether any geographic effects are present; use $\alpha$ = .10.}
+
+None of the geographic areas regress with a p-value less than $\alpha$ = .10.
+
+\textbf{State the alternatives, decision rule, and conclusion.}
+
+The null hypothesis is that the geographic region has no effect on number of
+active physicians.
+
+The alternative hypothesis is that the geographic region has an effect on the
+number of active physicians.
+
+```{R}
+alpha = 0.1
+df = nrow(cdi_data)-7
+t_critical = qt(1-alpha, df)
+p_critical = pt(t_critical, df)
+```
+
+The critical T-value is `r round(t_critical, 3)`. If the T-value of any factor
+is greater than the critical T-value, it would be significant.
+
+Because all of the T-values of the geographic regions are less than the 
+critical T-value, we do not discharge the null hypothesis. We assess that the
+geographic region has no effect on the number of active physicians.
+
+\textbf{What is the P-value of the test?}
+
+The critical P-value of the test is `r p_critical`.
+
+d-) \textbf{Check the constant variance assumption for the errors.}
+
+The null hypothesis of the Brown Forsythe test is that the variances of all 
+of the groups of residuals are equal.
+
+The alternative hypothesis is that the variances of residuals differ between
+groups.
+
+```{R}
+leveneTest(cdi_lm$residuals, cdi_lm$model$Geographic.region, center=median)
+```
+
+The critical F-value is `r pf(0.95,3,436)`. We cannot discharge the null
+hypothesis. We assess that the variances of all of the groups of residuals are 
+equal.
+
+e-) \textbf{Check the normality assumption.}
+
+```{R}
+plot(cdi_lm, which=2)
+```
+
+The Q-Q plot shows significant deviation at the ends of the residuals.
+
+```{R}
+shapiro.test(cdi_lm$residuals)
+```
+
+The Shapiro test indicates that the residuals are not normally distributed.
+
+f-) \textbf{Check for large leverage points.}
+
+Four topics in leverage and influence are:
+
+\begin{itemize}
+\item The hat matrix
+\item DFFITS
+\item DFBETAS
+\item Cook's Distance
+\end{itemize}
+
+The hat matrix of a linear regression is defined by:
+
+$$
+\hat{H} = X(X^TX)^{-1}X^T
+$$
+
+The hat matrix is a symmetric, idempotent, projection matrix that takes observed
+responses to the fitted values of a lienar regression. The hat matrix is unique
+when the design matrix is non-singular.
+
+The diagonal elements of the hat matrix are called the leverage-scores.
+
+The sum of the leverage scores is the sum of the diagonal elements.The sum of 
+diagonal elements of a matrix is called the trace. In the context of
+symmetric, idempotent matrices, the trace is equal to the rank of the matrix.
+Thus, when the design matrix is non-singular (full rank), the sum of the 
+leverage scores is the same as the degrees of freedom in the design matrix.
+
+The mean leverage score is $\frac{df}{N}$. Leverage scores can range from
+$\frac{1}{N}$ to 1. Scores of $\frac{1}{N}$ are constituted by points that lie
+on the mean, and therefore have no leverage, and no influence. Scores that 
+approach 1 are constituted by increasingly extreme outliers, with high leverage,
+but not necessarily high influence.
+
+One convention for identifying points of high leverage is to observe points in
+excess of 2 or 3 times the mean leverage score.
+
+
+
+```{R}
+N = nrow(cdi_data)
+cdi_df = attributes(logLik(cdi_lm))$df
+cdi_mean_ls = cdi_df/N
+cdi_hvs = hatvalues(cdi_lm)
+cdi_hl_indices = which(cdi_hvs > 3*cdi_mean_ls)
+```
+
+There are `r nrow(cdi_hl_indices)` points in excess of 3 times the mean
+leverage score.
+
+```{R}
+for (factor in c("Total.personal.income", "Total.population", "Land.area")) {
+  factor_hum = chartr(".", " ", factor)
+  plot(
+    cdi_data[,factor], 
+    cdi_data$Number.of.active.physicians, 
+    main=paste("Physicians", factor_hum, sep=" vs "),
+    xlab=factor_hum,
+    ylab="Number of active physicians",
+    pch = 19, 
+    cex=0.25
+  )
+  abline(cdi_lm$coefficients["(Intercept)"], cdi_lm$coefficients[factor])
+  points(
+    cdi_data[cdi_hl_indices, factor], 
+    cdi_data[cdi_hl_indices, "Number.of.active.physicians"], 
+    col="red"
+  )
+}
+```
+
+DFFITS, short for difference of fits, is a measure of influence. The definition
+of DFFITS for a point at index $i$ is given by
+
+$$
+DFFITS_i = \frac{\hat{y}_i - \hat{y}_{(i)}}{\sqrt{MSE_{(i)}h_{ii}}}
+$$
+In this formula, $\hat{y}_i$ is the value of the predictor at $i$; $h_{ii}$ is 
+the $i$th leverage value; $\hat{y}_{(i)}$ and $MSE_{(i)}$ are, respectively, the
+prediction and mean-squared error at $i$ for the subsample that omits the $i$th
+observation.
+
+One convention for identifying points of high influence is to compare their
+DFFITS values to the following:
+
+$$
+\sqrt{\frac{df_{(i)}}{N-df_{(i)}}}
+$$
+
+where $df_{(i)}$ is the degrees of freedom of the subsample, i.e. $df-1$.
+
+```{R}
+cdi_dffits = dffits(cdi_lm)
+cdi_dffits_crit = sqrt((df-1)/N)
+cdi_dffits_hi = which(cdi_dffits > cdi_dffits_crit)
+print(cdi_data[cdi_dffits_hi,])
+```
+
+```{R}
+for (factor in c("Total.personal.income", "Total.population", "Land.area")) {
+  factor_hum = chartr(".", " ", factor)
+  plot(
+    cdi_data[,factor], 
+    cdi_data$Number.of.active.physicians, 
+    main=paste("Physicians", factor_hum, sep=" vs "),
+    xlab=factor_hum,
+    ylab="Number of active physicians",
+    pch = 19, 
+    cex=0.25
+  )
+  abline(cdi_lm$coefficients["(Intercept)"], cdi_lm$coefficients[factor])
+  points(
+    cdi_data[cdi_hl_indices, factor], 
+    cdi_data[cdi_hl_indices, "Number.of.active.physicians"], 
+    col="blue"
+  )
+  points(
+    cdi_data[cdi_dffits_hi, factor], 
+    cdi_data[cdi_dffits_hi, "Number.of.active.physicians"], 
+    col="red"
+  )
+}
+```
+
+g-) \textbf{Check for outliers.}
+
+```{R}
+cdi_lm_residual_mean = mean(cdi_lm$residuals)
+cdi_outlier_crit = 3*sd(cdi_lm$residuals)
+cdi_outlier_hi = cdi_lm_residual_mean + cdi_outlier_crit
+cdi_outlier_lo = cdi_lm_residual_mean - cdi_outlier_crit
+cdi_outlier_idxs = which(cdi_lm$residuals > cdi_outlier_hi | cdi_lm$residuals < cdi_outlier_lo)
+
+cdi_outliers = cdi_data[cdi_outlier_idxs,]
+cdi_outlier_residuals = cdi_lm$residuals[cdi_outlier_idxs]
+plot(
+  cdi_outliers$Number.of.active.physicians,
+  cdi_outlier_residuals,
+  main = "CDI Linear Regression Residual Outliers",
+  xlab = "# Active Physicians",
+  ylab = "|y_0-y|",
+)
+abline(cdi_outlier_hi, 0)
+abline(cdi_outlier_lo, 0)
+```
+
+h-) \textbf{Check for influential points.}
+
+Influential points are identified using DFFITS in (f)
+

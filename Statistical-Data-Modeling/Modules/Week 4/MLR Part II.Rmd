@@ -1,0 +1,122 @@
+---
+title: "MLR Part II"
+output:
+  pdf_document: default
+  html_document: default
+---
+## Multiple Linear Regression
+
+The `Boston` data set contains 12 variables, and so it would be cumbersome to have to type all of these in order to perform a regression using all of the predictors.
+Instead, we can use the following short-hand:
+
+```{r}
+library(MASS)
+library(ISLR2)
+lm.fit <- lm(medv ~ ., data = Boston)
+summary(lm.fit)
+```
+
+We can access the individual components of a summary object by name
+(type `?summary.lm` to see what is available). Hence
+`summary(lm.fit)$r.sq` gives us the $R^2$, and
+`summary(lm.fit)$sigma` gives us the RSE. 
+
+## General F test, Can we drop Age and Indus from the model?
+
+$H_o$: $\beta_{Age}=\beta_{Indus}=0$\newline
+$H_a$: One of the $\beta$  is significant
+
+Reduced model without Age and Indus
+
+```{r}
+lm.red<- lm(medv ~ crim+zn+chas+nox+rm+dis+rad+tax+ptratio+lstat,  data = Boston)
+anova(lm.red,lm.fit)
+```
+Here Model 1 represents the reduced model, while Model 2 corresponds to full model.
+The `anova()` function performs a hypothesis test comparing the two models. P value is 0.94, we will accept $H_o$, we can drop Age and Indus.
+
+## Dropping variables
+
+What if we would like to perform a regression using all of the significant variables?  
+For example, in the above regression output,  `age` has a high $p$-value. So we may wish to run a regression excluding this predictor.
+
+The following syntax results in a regression using all predictors except `age`.
+
+```{r}
+lm.fit1 <- lm(medv ~ . - age, data = Boston)
+summary(lm.fit1)
+```
+
+Alternatively, the `update()` function can be used.
+
+```{r}
+lm.fit1 <- update(lm.fit, ~ . - indus )
+summary(lm.fit1)
+```
+
+Lets also get rid of indus variable that is also not significant
+
+```{r}
+lm.fit2 <- update(lm.fit1, ~ . - age)
+summary(lm.fit2)
+#we can drop them at the same time
+
+lm.fit2 <- update(lm.fit, ~ . - age - indus)
+summary(lm.fit2)
+```
+
+All variables are significant and $R^2$ is %74.
+
+## regression model assumptions
+
+```{r}
+par(mfrow=c(2,2))
+plot(lm.fit2)
+par(mfrow=c(1,1))
+library(MASS)
+par(mfrow=c(1,1))
+boxcox(lm.fit2,lambda=seq(-5,5,by=.1))
+#getting the value of lambda
+b=boxcox(lm.fit2,lambda=seq(-5,5,by=.1))
+lambda<-b$x[which.max(b$y)]
+lambda
+
+lm.fit3<-lm(log(medv) ~ crim+zn+chas+nox+rm+dis+rad+tax+ptratio+lstat,  data = Boston)
+summary(lm.fit3)
+par(mfrow=c(2,2))
+plot(lm.fit3)
+```
+
+Box-Cox suggest log transformation distribution. QQ plot shows outliers. Graphs and Breusch Pagan test shows that the variances are unequal. The normality tests indicate that data is not normal.
+
+##Breusch Pagan Test
+
+$H_o$: Error variances are constant\newline
+$H_a$: Error variances are not constant
+
+```{r}
+library(lmtest)
+bptest(lm.fit2)
+#on transformed model
+bptest(lm.fit3)
+```
+
+## Correlation Test for Normality
+
+$H_o$: Errors are normally distributed\newline
+$H_a$: Errors are Not normally distributed
+```{r}
+shapiro.test(lm.fit2$residuals)
+```
+
+## Transforming the data
+
+```{r}
+lm.fit3<- lm(log(medv) ~ crim + zn + chas + nox + rm + dis + rad + tax + ptratio +  lstat, data = Boston)
+summary(lm.fit3)
+par(mfrow=c(2,2))
+plot(lm.fit3)
+bptest(lm.fit3)
+```
+
+All variables are significant and $R^2$ is %79. QQ plot shows heavy tails with no outliers. Graphs and Breusch Pagan test shows that the variances are unequal. 

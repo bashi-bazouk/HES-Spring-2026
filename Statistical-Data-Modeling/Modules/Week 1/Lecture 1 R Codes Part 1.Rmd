@@ -1,0 +1,138 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(error = TRUE)
+```
+
+# Linear Regression
+
+
+## Libraries
+
+The `library()` function is used to load *libraries*, or groups of  functions and data sets that are not included in the base `R` distribution. Basic functions that perform least squares linear regression and other simple analyses come standard with the base distribution,  but more exotic functions require additional libraries.
+
+Here we load the 'faraway' and `MASS` packages, which are a very large collection of data sets and functions. We  also load the `ISLR2` package, which includes the data sets we will use.
+
+
+```{r chunk1}
+#install faraway package 
+install.packages("faraway")
+#once package is installed, you don't need to run the code in line 18
+#you need to load the package every time you start the R session
+library(faraway)
+library(MASS)
+install.packages("ISLR2")
+library(ISLR2)
+```
+
+
+If you receive an error message when loading any of these libraries, it
+likely indicates that the corresponding library has not yet been
+installed on your system. Some libraries, such as `MASS`, come with `R`
+and do not need to be separately installed on your computer. However,
+other packages, such as `ISLR2`, must be downloaded the first time they
+are used. This can be done directly from within `R`. For example, on a
+Windows system,  select the `Install package` option
+under the `Packages` tab.  After you select any mirror site, a
+list of available packages will appear. Simply select the package you
+wish to install and `R` will automatically download the
+package. Alternatively, this can be done at the `R` command line
+via `install.packages("ISLR2")`. This installation only needs
+to be done the first time you use a package. However, the
+`library()` function must be called within each `R` session.
+
+## Simple Linear Regression
+
+The `ISLR2` library contains the `Boston`  data set, which
+records `medv` (median house value) for $506$ census tracts in Boston. We will seek to predict `medv` using $12$ predictors such as `rmvar` (average number of  rooms per house), `age` (proportion of owner-occupied units built prior to 1940) and `lstat` (percent of households with low socioeconomic status).
+
+What is our dependent variable?
+
+What are our independent variables?
+
+```{r chunk2}
+#head comment shows the first six observation of the data
+head(Boston)
+#following two lines shows the data dictionary
+help(Boston)
+?Boston
+#str comment shows the data frame 
+str(Boston)
+```
+
+
+
+We will start by using the `lm()` function to fit a simple  linear regression model, with `medv` as the response and `lstat`  as the predictor. The basic syntax is `lm(y ~ x, data)`, where `y` is the response, `x` is the predictor, and `data` is the data set in which these two variables are kept.
+
+```{r chunk3, error=TRUE}
+lm.fit = lm(medv ~ lstat,data=Boston)
+```
+
+The command causes an error because `R` does not know where to find the variables `medv` and `lstat`. The next line tells `R` that the variables are in `Boston`. If we attach `Boston`, the first line works fine because `R` now recognizes the variables.
+
+```{r chunk4}
+lm.fit <- lm(medv ~ lstat, data = Boston)
+attach(Boston)
+lm.fit <- lm(medv ~ lstat)
+```
+
+
+If we type `lm.fit`,  some basic information about the model is output. For more detailed information, we use `summary(lm.fit)`. This gives us $p$-values and standard errors for the coefficients, as well as the $R^2$ statistic and $F$-statistic for the model.
+
+
+```{r chunk5}
+lm.fit
+summary(lm.fit)
+```
+
+We can use the `names()` function in order to find out what other pieces of information  are stored in `lm.fit`.
+Although we can extract these quantities by name---e.g. `lm.fit$coefficients`---it is safer to use the extractor functions like `coef()` to access them.
+
+```{r chunk6}
+names(lm.fit)
+coef(lm.fit)
+```
+
+In order to obtain a confidence interval for the coefficient estimates, we can use the `confint()` command.
+
+```{r chunk7}
+confint(lm.fit)
+```
+
+The `predict()` function can be used to produce confidence intervals and prediction intervals for the prediction of `medv` for a given value of `lstat`. We will talk about the prediction and confidence intervals later in the class.
+
+```{r chunk8}
+predict(lm.fit, data.frame(lstat = (c(5, 10, 15))),
+    interval = "confidence")
+predict(lm.fit, data.frame(lstat = (c(5, 10, 15))),
+    interval = "prediction")
+```
+
+For instance, the 95 \% confidence interval associated with a `lstat` value of 10 is $(24.47, 25.63)$, and the 95 \% prediction interval is $(12.828, 37.28)$.
+As expected, the confidence and prediction intervals are centered around the same point (a predicted value of $25.05$ for `medv` when `lstat` equals 10), but the latter are substantially wider.
+
+We will now plot `medv` and `lstat` along with the least squares regression line using the `plot()` and `abline()` functions.
+
+```{r chunk9}
+plot(lstat, medv)
+abline(lm.fit)
+```
+
+There is some evidence for non-linearity in the relationship between `lstat` and `medv`. We will explore this issue  later.
+
+The `abline()` function can be used to draw any line, not just the least squares regression line.
+To draw a line with intercept `a` and slope `b`, we  type `abline(a, b)`. Below we experiment with some additional settings for plotting lines and points.
+ The `lwd = 3` command causes the width of the regression line to be increased by a factor of 3;  this works for the `plot()` and `lines()` functions also. We can also use the `pch` option to create different plotting symbols.
+
+```{r chunk10}
+plot(lstat, medv)
+abline(lm.fit, lwd = 3)
+abline(lm.fit, lwd = 3, col = "red")
+plot(lstat, medv, col = "red")
+plot(lstat, medv, pch = 20)
+plot(lstat, medv, pch = "+")
+```
+

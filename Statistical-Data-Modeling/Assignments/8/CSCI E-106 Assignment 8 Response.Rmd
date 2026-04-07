@@ -1,0 +1,62 @@
+---
+title: 'CSCI E-106:Assignment 8'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ISLR2)
+
+library(faraway)
+data(diabetes,package="faraway")
+tail(diabetes)
+```
+
+## Problem 1
+
+Four hundred three African Americans were interviewed in a study to understand 
+the prevalence of obesity, diabetes and other cardiovascular risk factors in 
+central Virginia. In this question we build a regression tree-based model for 
+predicting glycosolated hemoglobin (glyhb) in terms of the other relevant variables. (70 points)
+
+```{R}
+
+```
+
+a-) Plot the response against each of the predictors and comment on the apparent strength of the relationships observed. (5 pts)
+
+b-) Investigate the pattern of missing values in the data. By eliminating a combination of rows and columns, produce a reduced dataset that contains no missing values. Try to make the reduction as small as possible. (5 pts) 
+
+c-) Fit a linear model with main effects for all the predictors. Which predictors appear to be most important? Make a plot of the residuals and fitted values from this model and comment. (10 pts)
+
+d-) Fit the regression tree. From the output, answer the following questions: What is the mean response for these observations? What characterizes the largest terminal node in the tree? What is the mean response in this node? (10 pts)
+
+e-) Make a plot of the tree. What feature of the plot reveals the most important predictor? (10 pts)
+
+f-) Plot the residuals against the fitted values for this tree. Comment. (10 pts)
+
+g-) Predict the response for an individual with these predictor values: (10 pts)
+
+```{r}
+dat<-data.frame(cbind(id=1004,chol=213,stab.glu=72,hdl=58,ratio=3.3,location="Buckingham",
+                      age=56,gender="female",height=64,weight=131,frame="medium",bp.1s=108,
+                      bp.1d=55,bp.2s=NA,bp.2d=NA,waist=30,hip=40,time.ppn=720))
+```
+
+(h)Glycosolated hemoglobin greater than 7.0 is usually taken as a positive diagnosis of diabetes. Build the classification tree for the diagnosis of diabetes and compare this model to the corresponding regression tree. Which predictors are most useful? (10 pts)
+
+## Problem 2
+
+Refer to the Prostate cancer data set. Serum prostate-specific antigen (PSA) was determined in 97 men with advanced prostate cancer. PSA is a well-established screening test for prostate cancer and the oncologists wanted to examine the correlation between level of PSA and a number of clinical measures for men who were about to undergo radical prostatectomy. The measures are cancer volume, prostate weight, patient age, the amount of benign prostatic hyperplasia, seminal vesicle invasion, capsular penetration, and Gleason score. (30 pts) 
+
+a-) Select a random sample of 65 observations to use as the model-building data set (Please use set.seed(567)). Develop a best subset model for predicting PSA on the train data set. Justify your choice of model. Assess your model's ability to predict and discuss its usefulness to the oncologists.(5 pts)
+
+
+b-) Develop a regression tree for predicting PSA on the train data set. Justify your choice of number of regions (tree size), and interpret your regression tree. (10 pts)
+
+c-) Compare the performance of your regression tree model with that of the best regression model on the test and train data sets. Which model would you choose and why?  (10 pts)
+
+d-) Which model is more easily interpreted and why? (5pts)

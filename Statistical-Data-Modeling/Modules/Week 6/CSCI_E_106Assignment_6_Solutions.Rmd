@@ -1,0 +1,545 @@
+---
+title: 'CSCI E-106:Assignment 6_solutions'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+## Helper to display regression function with n coefficients
+## If var.names = TRUE add a space and "*" symbol to make readable
+dispRegFunc <- function(reg, var.names=FALSE, pdfWrap=0, signif=6) {
+
+  ## Set the line wrapping only if this is being knit as a pdf
+  line.limit <- 0
+  if (!is.null(knitr::current_input())) {
+    if("pdf_document" %in% rmarkdown::all_output_formats(knitr::current_input())) {
+       line.limit <- pdfWrap
+    }
+  }
+  ## Check to see if this is a cv.glmnet object or a lm or rlm object
+  ifelse(class(reg) == "cv.glmnet",
+         coefs <- predict(reg, s=reg$lambda.min, type="coefficients")[,1],
+         coefs <- reg$coefficients)
+  
+  b0 = coefs[1]
+  n <- length(coefs)
+  my_formula <- paste0("Y = ", round(b0, digits = signif))
+  for (i in 2:n) {
+    ## Choose the +/- sign for the coefficient then remove it using abs()
+    options(scipen = 999)
+    new.formula.term <- paste0(ifelse(coefs[i] < 0," - "," + "),
+                         signif(abs(coefs[i]),signif),
+                         ifelse(var.names,paste0(" * ",names(coefs)[i]),
+                         names(coefs)[i]))
+    if (line.limit > 0) {
+      if (line.limit <= nchar(my_formula) + nchar(new.formula.term)) {
+        print(my_formula)
+        my_formula <- new.formula.term
+      } else {
+        my_formula <- paste0(my_formula, new.formula.term)
+      }
+    }
+    else {
+      my_formula <- paste0(my_formula, new.formula.term)
+    }
+  }
+  print(my_formula)
+}
+# Function to load or download libraries
+loadLib = function(libName)
+{
+    if(require(libName, character.only=TRUE))
+    {
+        ##cat(libName, "loaded properly\n")
+    } else {
+        cat("Installing", libName, "\n")
+        install.packages(libName)
+        if(require(libName, character.only=TRUE))
+        {
+            cat(libName, "loaded properly\n")
+        } else {
+            stop(c(libName, "not properly installed\n"))
+        }
+    }
+}
+
+libs = c("rlang","ggplot2","faraway", "knitr", "MASS", "formatR", "glue", "olsrr","dplyr", "ALSM","reshape", "pander", "rmarkdown", "markdown", "tidyr", "GGally","ggpubr", "lmtest","caret","fastDummies","magick","tinytex")
+
+
+
+for (lib in libs)
+{
+    loadLib(lib)
+}
+```
+
+### Due Date: March 13, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+
+## Problem 1
+
+Using the divusa data under faraway library,if you are using the R Studio, please use the command below to download the data:
+```{r}
+library(faraway)
+data(divusa,package="faraway")
+#str(divusa)
+```
+
+If you are using Posit R Cloud instead of RStudio Desktop, please use the command below to download the data:
+
+```{r}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/divusa.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(divusa)
+```
+
+#Data Preparations and Exploration: what typo of variables, what are the units?
+Check your data first. The data set has 77 observations of  7 variables. There is a noticeable correlation among some of the predictions when inspecting the correlation matrix.
+
+```{r, include=TRUE}
+library(faraway)
+
+
+n<-dim(divusa)[1]
+# How the correlations look like? Perfectly Collinear data may be a problem to start
+Correlations<-round(cor(divusa),2) 
+# Identify strongly correlated variables with wage
+#install.packages("corrplot")
+library(corrplot)
+corrplot(Correlations, method = "color", col = colorRampPalette(c("blue", "white", "red"))(200), 
+         type = "upper", order = "hclust", 
+         addCoef.col = "black", # Add correlation coefficients
+         tl.col = "black", tl.srt = 45, # Text label color and rotation
+         diag = FALSE) # Hide the diagonal
+
+#No categorical variables levels
+#Are we modeling a stationary variable (distributed with constant mean and variance) or a stochastic process (e.g. a random walk)??#Is the data of the response variable stationary, what can we say with a graph? It actually looks bimodal.
+ggdensity(divusa$divorce, 
+          title = "Density Plot",
+          xlab = "Y") +
+          theme(plot.title = element_text(hjust = 0.5))
+#NAs present?
+colSums(is.na(divusa))
+#No NAs are present.
+
+# We conclude that potential problems among marriage, birth, female and year.
+```
+
+(20 points, 5 points each) 
+
+##a-) Fit a regression model with divorce as the response and unemployed, femlab, marriage, birth and military as predictors. 
+**Conclusion**The model is "Y = 2.487845 - 0.111252unemployed + 0.383649femlab + 0.118674marriage - 0.129959birth - 0.026734military". Some signs of multi-collinearity, variables ‘unemployed’ and 'military' are not statistically significant. Adjusted R^2 is 92%
+<!-- Input solution below -->
+```{r}
+model <- lm(divorce ~ unemployed+femlab+marriage+birth+military, data = divusa)
+summary(model)
+dispRegFunc(model)
+```
+
+<!-- End of solution -->
+
+##b-) For the same model, compute the VIFs. Is there evidence that collinearity causes some predictors not to be significant? Explain. 
+
+**Conclusion** The value of VIF of the variables 'femlab' and 'marriage" are around 3. This indicates moderate correlation between the given predictor variables and other predictor variables in the model. If we take the sqrt of 3.613276=1.900862, as telling us that the standard error for percent female participation in labor force aged 16+ is 1.9 times larger then it would have been without multi-collinearity (refer to Faraway linear models with R page 108).
+<!-- Input solution below -->
+```{r}
+library(MASS)
+#one needs to create the model matrix first
+vif(model)
+```
+<!-- End of solution -->
+##c-) Does the removal of insignificant predictors from the model reduce the collinearity? Investigate.
+
+**CONCLUSION** The removal of the insignificant predictor 'unemployed' and 'military' does reduce the collinearity. All vif values are well below 3.
+<!-- Input solution below -->
+```{r}
+library(faraway)
+modelc <- lm(divorce ~ femlab+marriage+birth, data = divusa)
+summary(modelc)
+dispRegFunc(modelc)
+vif(modelc)
+```
+
+<!-- End of solution -->
+##d-) Visually using the appropriate graphs, comment on the regression model assumptions. 
+
+**Conclusion**Removing the non-significant variables improved the linear fit, residuals look normally distributed, and outliers does not seem influential, still some non-linearity, the variance of the overall residuals may be not constant.
+<!-- Input solution below -->
+```{r}
+oldpar <- par(mfrow = c(1,2))
+plot(modelc)
+par(oldpar)
+```
+<!-- End of solution -->
+<!-------------------------------------->
+## Problem 2
+
+Refer to the Machine speed Data, showing the number of defective items produced by a machine (Y) and the speed setting of the machine (X). Answer the questions below. (30 points, 5 points each)
+
+
+##a-) Fit a linear regression function by ordinary least squares, obtain the residuals, and plot the residuals against X. Plot the squared residuals against X. What do the plots suggest? (10 points)
+**Conclusion**The model is "Y = -5.75 + 0.1875X". Some signs of increasing residuals may be a sign of non-constant variance of the residuals.
+<!-- Input solution below -->
+```{r}
+machine_speed_data <- read.csv("Machine Speed.csv")
+model <- lm(Y ~ X, data = machine_speed_data)
+summary(model)
+dispRegFunc(model)
+# Obtain squared residuals from model object
+ei<-model$residuals
+squared.ei<-(ei)^2
+# Plot the squared residuals against the independent variable X
+plot(x = machine_speed_data$Y, y = squared.ei,
+     xlab = "Independent Variable (wt)",
+     ylab = "Squared Residuals",
+     main = "Squared Residuals vs. X")
+# Add a horizontal line at y=0 (though all values will be >= 0) or a loess smooth line
+# abline(h = 0, col = "red", lty = 2) 
+lines(lowess(machine_speed_data$Y, squared.ei), col = "blue", lwd = 2)
+
+par(oldpar)
+```
+
+<!-- End of solution -->
+##b-) Conduct the Breusch-Pagan test for constancy of the error variance,  use $\alpha$ = .10. State the alternatives, decision rule, and conclusion. (5 points)
+
+**Conclusion**There is 2 alternatives, H0: constant error variance; and Ha: no evidence of constant variance. The decision rule is one rejects the null hypothesis of constant variance if the value of our test statistics is below a critical value, or equivalently if the p.value associated with our test statistics is below alpha = .10 Here test statistic is 0.0663 > 0.10,so we conclude that error variances are not constant.
+<!-- Input solution below -->
+```{r}
+#We can not reject the null hypothesis at 10% confidence level, as p.value is 0.0663 which is smaller than 0.10 - so, conclude that the error variances are  constant. We use the default version of the test that takes into account studentized residuals which is recommended given the small sample size.
+library(lmtest)
+bptest(model)
+```
+
+<!-- End of solution -->
+
+##c-)  Calculate the weights for  weighted least square estimation and refit the model.(5 points)
+**Conclusion**The weights are 0.017485144,0.003591017,0.006801998,0.003591017,0.017485144,0.006801998,0.006801998,0.003591017,0.017485144,0.003591017,0.017485144,and 0.006801998 See code below. Refit model is "Y = -6.266458 + 0.189297X" (Optional) After transformation the BP test shows that error variance are constant, R^2 is higher, and the predictor variable is significative. See code below. 
+<!-- Input solution below -->
+```{r}
+# We follow the method covered during the class
+# Step 1st Iteration
+ei<-model$residuals
+abs.ei<-abs(ei)
+g1<-lm(abs.ei~machine_speed_data$X)
+summary(g1)
+# Step 2 Derive the weights
+s<-g1$fitted.values
+wi=1/(s^2)
+
+print(wi)
+
+```
+Using the code below we refit the model.
+```{r}
+g2<-lm(Y~X,weights= wi, data=machine_speed_data)
+summary(g2)
+par(mfrow=c(2,2))
+plot(g2)
+library(lmtest)
+bptest(g2)
+dispRegFunc(g2)
+```
+<!-- End of solution -->
+
+##d-)  Are the weighted least squares estimates of $\beta_0$ and $\beta_1$ similar to the ones obtained with ordinary least squares in part (a)?(5 points)
+**Conclusion**The coefficients of the first and second regression are differents, mainly the slope coefficients.
+<!-- Input solution below -->
+```{r}
+#got coefficients first regression
+a = summary(model)$coefficients[1,1]
+a
+b = summary(model)$coefficients[2,1]
+b
+#got coefficients second regression
+a2 = summary(g2)$coefficients[1,1]
+a2
+b2 = summary(g2)$coefficients[2,1]
+b2
+# Side-by-side display
+# Create the data frame
+results_table <- data.frame(
+  Coefficient = c("Intercept", "Slope"),
+  Model_1 = c(a, b),
+  Model_2 = c(a2, b2)
+)
+
+print(results_table)
+
+```
+<!-- End of solution -->
+##e-) Compare the estimated standard deviations of the weighted least squares estimates b$\beta_{w0}$ and $\beta_{w1}$in part (c) with those for the ordinary least squares estimates in part (a). What do you find?(5 points)
+**Conclusion**The standard deviations of the coefficients of the first and second regression are very similar to the second digit.
+<!-- Input solution below -->
+```{r}
+#got std of the coefficients first regression
+sa = summary(model)$coefficients[2,1]
+sa
+sb = summary(model)$coefficients[2,2]
+sb
+#got std of coefficients second regression
+sa2 = summary(g2)$coefficients[2,1]
+sa2
+sb2 = summary(g2)$coefficients[2,2]
+sb2
+# Side-by-side display
+# Create the data frame
+results_table <- data.frame(
+  Coefficient = c("Intercept Std", "Slope Std"),
+  Model_1 = c(sa, sb),
+  Model_2 = c(sa2, sb2)
+)
+
+print(results_table)
+
+```
+<!-- End of solution -->
+##f-) Iterate the steps in parts (c) one more time. Is there a substantial change in the
+estimated regression coefficients? If so, what should you do?(5 points)
+**Conclusion**The weights are same to the 3rd digit:0.017791869,0.003585388,0.006831476,0.003585388,0.017791869,0.006831476,0.006831476,0.003585388,0.017791869,0.003585388,0.017791869,0.006831476  See code below. Refit model is "Y = -6.271277 + 0.189314X" The coefficients just slightly changed, we can use the first regression.
+<!-- Input solution below -->
+```{r}
+
+#2nd iteration - one more iteration
+ei<-g2$residuals
+abs.ei<-abs(ei)
+g3<-lm(abs.ei~machine_speed_data$X)
+summary(g3)
+s<-g3$fitted.values
+wi=1/(s^2)
+
+print(wi)
+g4<-lm(Y~X,weights= wi, data=machine_speed_data)
+summary(g4)
+dispRegFunc(g4)
+plot(g4)
+```
+<!-- End of solution -->
+<!-------------------------------------->
+
+## Problem 3
+
+Refer to the CDI data set used in Assignment 5. For this analysis, use all variables except Identification Number, County, and State. In addition, include the dummy variables you created for Geographic Region in Question 1(a) of Assignment 5, and remove the original Geographic Region variable. The dependent variable is the number of active physicians (Y), which should be regressed on all remaining variables, including the geographic‑region dummy variables.(50 points)
+```{r}
+PMQ1<- read.csv("CDI Data.csv")
+# Development Data, all variables less Identification Number, County, and State.
+Y<-PMQ1$Number.of.active.physicians
+X1<-PMQ1$Land.area
+X2<-PMQ1$Total.population
+X3<-PMQ1$Percent.of.population.aged.18.34
+X4<-PMQ1$Percent.of.population.65.or.older
+X5<-PMQ1$Number.of.hospital.beds
+X6<-PMQ1$Total.serious.crimes
+X7<-PMQ1$Percent.high.school.graduates
+X8<-PMQ1$Percent.bachelor.s.degrees
+X9<-PMQ1$Percent.below.poverty.level
+X10<-PMQ1$Percent.unemployment
+X11<-PMQ1$Per.capita.income
+X12<-PMQ1$Total.personal.income
+X13<-PMQ1$Geographic.region
+
+data<-cbind(Y,X1,X2,X3,X4,X5,X6,X7,X8,X9,X10,X11,X12,X13)
+data<-data.frame(data)
+# Check X13 Levels, need 3 dummies, we decided to drop the level with less
+table(X13)
+data$X13.1=I(data$X13==1)*1
+data$X13.2=I(data$X13==2)*1
+data$X13.3=I(data$X13==3)*1
+# Drop un-necessary column
+data <- data %>% select(-c(X13))
+
+data<-data.frame(data)
+
+```
+
+## a-) Use a stepwise variable selection method to identify the best regression model. Then evaluate the model assumptions using appropriate diagnostic plots and comment on whether the assumptions appear to be satisfied. (10 points)
+
+**Conclusion** The regression model is "Y = 943.970245 - 0.00218821X2 + 0.505413X5 - 10.6397X7 + 27.9518X8 - 0.0346698X11 + 0.151125X12 - 134.951X13.1 - 179.805X13.2 - 194.601X13.3". Even though the regression have high R^2 and all significant variables. Normal linear regression model does not seem to be appropriate for the problem. There seems to be non-normal residuals as heavy tails are evident in the QQ plot, variance of errors increasing, and the presence of an influential outlier from the scale location and the Residual vs. Leverage graph.
+<!-- Input solution below -->
+```{r}
+lmod <- lm(Y~.,data=data)
+
+library(olsrr)
+# Forward-Backward Stepwise Regression by p-value
+bothlm = ols_step_both_p(lmod, pent=0.05, prem=0.05)
+summary(bothlm$model)
+# We note we still have one non-significant variable, remember R comes without any guarantee, one need to check, we drop X6
+lmod2<-lm(Y~X2+X5+X7+X8+X11+X12+X13.1+X13.2+X13.3,data=data)
+summary(lmod2)
+plot(lmod2)
+######
+X13.1<-data$X13.1
+X13.2<-data$X13.2
+X13.3<-data$X13.3
+data2<-cbind(Y,X2,X5,X7,X8,X11,X12,X13.1,X13.2,X13.3)
+data2<-data.frame(data2)
+dispRegFunc(lmod2)
+```
+<!-- End of solution -->
+
+b-) The CDI data set contains 440 observations. Randomly divide the data into five folds, each containing 88 observations, using set.seed(1023) to ensure reproducibility. Perform 5‑fold cross‑validation to assess the stability of your selected model in part a. For each fold, report the following metrics for both the training and testing sets:\newline
+- Root Mean Squared Error (RMSE)\newline
+- R‑squared\newline
+- Mean Absolute Error (MAE)\newline
+
+Summarize the results across all five folds and comment on the model’s stability and predictive performance. (40 Points)
+
+*Conclusion* This is a complicated task. I used Microsoft Copilot to help generate an initial version of the R function. I verified, tested, and modified the code myself. First, I set as prompts, the linear model method, the 440 observations size, then the requirement of randomly divide the data into five folds, each containing 88 observations, using set.seed(1023), and the reporting of the performance of the model using 5‑fold cross‑validation.I required to show the stability across folds using RMSE, MSE and R^2 tables in and out of sample per each of the 5 folds and a summary. When reviewing the results the model is over fit as the summary R^2 is higher in the development samples than in the test samples. See code below with a summary of the results.
+
+<!-- Input solution below -->
+```{r}
+cv5_linear_caret <- function(
+  data,
+  response,            # character: name of response variable (numeric)
+  predictor,           # character: name of predictor variable
+  seed = 1023,         # fixed seed for reproducibility
+  fit_fun = NULL,      # optional: custom fit function for "selected model in part (a)"
+  ...
+) {
+  # Dependencies
+  if (!requireNamespace("caret", quietly = TRUE)) {
+    stop("Package 'caret' is required. Please install it: install.packages('caret')")
+  }
+  
+  # Basic checks
+  stopifnot(is.data.frame(data))
+  if (!all(c(response, predictor) %in% names(data))) {
+    stop("response/predictor must be columns in 'data'.")
+  }
+  if (!is.numeric(data[[response]])) {
+    stop("The response variable must be numeric for caret::defaultSummary (regression).")
+  }
+  if (nrow(data) != 440) {
+    warning(sprintf("Data has %d rows; proceeding anyway but function was designed for 440.", nrow(data)))
+  }
+  
+  # Build the model formula
+  form <- as.formula(paste(response, "~", predictor))
+  
+  # Model is linear regression (lm)
+  if (is.null(fit_fun)) {
+    fit_fun <- function(formula, dat, ...) stats::lm(formula, data = dat, ...)
+  }
+  
+  # Create 5 equal folds of 88 each using a fixed seed
+  set.seed(seed)
+  n <- nrow(data)
+  k <- 5
+  if (n %% k != 0) stop("nrow(data) must be divisible by 5 to guarantee equal fold sizes.")
+  
+  # Random permutation + exact equal fold assignment
+  idx <- sample(n)                         # random permutation
+  fold_id <- rep(1:k, each = n / k)        # 1..5, exactly 88 each for n=440
+  fold_id <- fold_id[order(idx)]           # map to original row order
+  folds <- split(seq_len(n), fold_id)      # list of test indices per fold
+  
+  # Storage for metrics
+  train_metrics <- vector("list", k)
+  test_metrics  <- vector("list", k)
+  models        <- vector("list", k)
+  
+  # Cross-validation loop
+  for (i in seq_len(k)) {
+    test_idx  <- folds[[i]]
+    train_idx <- setdiff(seq_len(n), test_idx)
+    
+    data.train <- data[train_idx, , drop = FALSE]
+    data.test  <- data[test_idx,  , drop = FALSE]
+    
+    # Fit your selected model from part (a); default: lm
+    model <- fit_fun(form, data.train, ...)
+    models[[i]] <- model
+    
+    # ---- Training metrics (caret::defaultSummary) ----
+    PredictedTrain <- predict(model, newdata = data.train)
+    ModelTrain <- data.frame(
+      obs  = data.train[[response]],
+      pred = PredictedTrain
+    )
+    Model_Train <- caret::defaultSummary(ModelTrain)  # RMSE, Rsquared, MAE
+    train_metrics[[i]] <- as.data.frame(as.list(Model_Train))
+    train_metrics[[i]]$Fold <- i
+    
+    # ---- Testing metrics (caret::defaultSummary) ----
+    PredictedTest <- predict(model, newdata = data.test)
+    ModelTest <- data.frame(
+      obs  = data.test[[response]],
+      pred = PredictedTest
+    )
+    Model_Test <- caret::defaultSummary(ModelTest)    # RMSE, Rsquared, MAE
+    test_metrics[[i]] <- as.data.frame(as.list(Model_Test))
+    test_metrics[[i]]$Fold <- i
+  }
+  
+  # Bind per-fold metrics
+  train_df <- do.call(rbind, train_metrics)[, c("Fold", "RMSE", "Rsquared", "MAE")]
+  test_df  <- do.call(rbind,  test_metrics)[,  c("Fold", "RMSE", "Rsquared", "MAE")]
+  
+  # Summaries: mean and sd across folds
+  summarize_metrics <- function(df) {
+    data.frame(
+      Metric = c("RMSE", "Rsquared", "MAE"),
+      Mean   = c(mean(df$RMSE), mean(df$Rsquared), mean(df$MAE)),
+      SD     = c(sd(df$RMSE),   sd(df$Rsquared),   sd(df$MAE))
+    )
+  }
+  summary_train <- summarize_metrics(train_df)
+  summary_test  <- summarize_metrics(test_df)
+  
+  # Return a structured result
+  list(
+    call = match.call(),
+    formula = form,
+    seed = seed,
+    fold_sizes = sapply(folds, length),
+    folds = folds,                       # test indices per fold
+    per_fold_train = train_df,           # RMSE/R2/MAE by fold (train)
+    per_fold_test  = test_df,            # RMSE/R2/MAE by fold (test)
+    summary_train = summary_train,       # Means and SDs (train)
+    summary_test  = summary_test,        # Means and SDs (test)
+    models = models                      
+  )
+}
+
+```
+
+Next #######Apply the function and produce the required reports on performance in sample and out of sample.
+
+
+```{r}
+
+set.seed(1023)  
+cv_out <- cv5_linear_caret(
+  data = data2,
+  response = "Y",
+  predictor = c("X2","X5","X7","X8","X11","X12","X13.1","X13.2","X13.3")
+)
+# Inspect fold sizes (should be all 88)
+cv_out$fold_sizes
+# Per-fold metrics (training and testing)
+cv_out$per_fold_train
+cv_out$per_fold_test
+# Summaries across folds
+cv_out$summary_train
+cv_out$summary_test
+
+```
+
+<!-- End of solution -->
+<!-------------------------------------->
+
+
+

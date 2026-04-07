@@ -1,0 +1,295 @@
+---
+title: 'CSCI E-106:Assignment 7'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(faraway)
+library(glmnet)
+library(MASS)
+```
+
+## Problem 1
+
+```{r}
+data(fat,package="faraway")
+str(fat)
+```
+
+\emph{Take the fat data, and use the percentage of body fat, siri, as the response and 
+the other variables, except brozek and density as potential predictors.}
+
+```{R}
+cnames = names(fat)
+brozek = match("brozek", cnames)
+density = match("density", cnames)
+fat_data = subset(fat, select = -c(brozek, density))
+```
+
+\emph{a-) Create train and test data sets. Use 70% of the data for train data 
+set and use remaining data (30% of data) for test data set 
+(use set.seed(1023)).}
+
+```{R}
+set.seed(1023)
+fat_pop_n = nrow(fat_data)
+fat_alpha_n =round(7/10*fat_pop_n)
+fat_training_idx = sample(fat_pop_n, size = fat_alpha_n, replace=FALSE)
+fat_training = fat_data[fat_training_idx,]
+fat_testing = fat_data[-fat_training_idx,]
+fat_training_n =  nrow(fat_training)
+fat_testing_n = nrow(fat_testing)
+print(sprintf("%i/%i=%f", fat_training_n, fat_pop_n, fat_training_n/fat_pop_n))
+```
+
+\emph{Train each model and comment on the model performance.}
+
+a-) Linear regression with all predictors,
+
+```{R}
+fat_lm = lm(siri ~ ., fat_training)
+mse = mean(fat_lm$residuals^2)
+print(mse)
+summary(fat_lm)
+defaultSummary(data.frame(obs=fat_training$siri, pred=predict(fat_lm, fat_training)))
+```
+
+The R-squared values are very high. The model may even be over-fitted.
+
+There are positive and negative weights in the model, which can happen when 
+there is multi-collinearity.
+
+The MSE is 1.64.
+
+b-) Linear regression with variables selected using stepwise (both ways) 
+selection criteria,
+
+```{R}
+fat_ols_step_both = olsrr::ols_step_both_adj_r2(fat_lm)
+fat_ols_step_both
+defaultSummary(data.frame(obs=fat_training$siri, pred=predict(fat_ols_step_both$model, fat_training)))
+```
+
+The R-squared (0.974) and Ajdusted R-squared (0.972) are almost identical to
+that of the full linear model. There are 10 variables in this model, as opposed
+to the 15 of the full model.
+
+The MSE is 1.68.
+
+c-) \emph{Ridge Regression}
+
+```{R}
+fat_training_response = fat_training$siri
+fat_training_dm = model.matrix(siri ~ ., fat_training)[,-c(1)]
+
+fat_ridge = cv.glmnet(
+  fat_training_dm, 
+  fat_training$siri,
+  nlambda=100, 
+  lambda.min.ratio=0.0001,
+  type.measure="mse"
+)
+fat_ridge_lambda_min = fat_ridge$lambda.min
+print(fat_ridge)
+plot(fat_ridge)
+defaultSummary(data.frame(
+    obs=fat_training_response, 
+    pred=c(predict(fat_ridge, s=fat_ridge_lambda_min, fat_training_dm))
+  )
+)
+
+```
+
+The R-squared of 0.974 is almost identical to the linear models.
+
+The MSE is 1.66.
+
+d-) Perform Lasso Regression and comment on the model performance
+
+```{R}
+fat_lasso = cv.glmnet(
+  fat_training_dm, 
+  fat_training_response, 
+  alpha=1,
+  nlambda=100, 
+  lambda.min.ratio=0.0001
+)
+fat_lasso_lambda_min = fat_lasso$lambda.min
+print(fat_lasso)
+plot(fat_lasso)
+defaultSummary(data.frame(
+    obs=fat_training_response, 
+    pred=c(predict(fat_lasso, s=fat_lasso_lambda_min, fat_training_dm))
+  )
+)
+
+```
+
+The R-squared of 0.974 is almost identical to the linear models.
+
+The MSE is 1.67.
+
+
+e-)Perform Elastic Net and comment on the model performance
+
+```{R}
+alpha_ivl = 0.01
+fat_en_res = data.frame()
+for (i in 1:floor(1/alpha_ivl)) {
+  alpha = i*alpha_ivl
+  fat_en = cv.glmnet(fat_training_dm, fat_training_response, alpha=alpha, nlambda=100,lambda.min.ratio=0.0001)
+  fat_en_lambda_min = fat_en$lambda.min
+  fat_en_nzero = fat_en$nzero[fat_en$lambda == fat_en_lambda_min]
+  fat_en_coefficients = predict(fat_en, s=fat_en_lambda_min, type="coefficients")
+  fat_en_predicted = as.matrix(data.frame(1, fat_training_dm)) %*% fat_en_coefficients
+  fat_training_sst = sum((fat_training_response - mean(fat_training_response))^2)
+  fat_en_sse = sum((fat_training_response - fat_en_predicted)^2)
+  fat_en_r_squared = 1 - (fat_en_sse/fat_training_sst)
+  fat_en_res = rbind(
+    fat_en_res, 
+    data.frame(alpha=alpha, nzero=fat_en_nzero, r_squared=fat_en_r_squared)
+  )
+}
+
+plot(fat_en_res$alpha, fat_en_res$r_squared, main="ElasticNet", xlab="alpha", ylab="R^2")
+plot(fat_en_res$alpha, fat_en_res$nzero, main="ElasticNet", xlab="alpha", ylab="nzero")
+  
+best_r_squared = max(fat_en_res$r_squared)
+best_alpha = fat_en_res$alpha[fat_en_res$r_squared==best_r_squared]
+fat_en = cv.glmnet(fat_training_dm, fat_training_response, alpha=best_alpha, nlambda=100,lambda.min.ratio=0.0001)
+fat_en_lambda_min = fat_en$lambda.min
+
+print(fat_en)
+plot(fat_en,)
+defaultSummary(data.frame(
+    obs=fat_training_response, 
+    pred=c(predict(fat_en, s=fat_en_lambda_min, fat_training_dm))
+  )
+)
+
+```
+
+The Elastic Net regression converges to the lasso.
+
+The MSE is 1.66.
+
+**Use the test data sets to answer questions below**
+
+f-) Test the model's performances for part (a) to part (e) above and comment on 
+model stability and performance. Which model would you choose and why?
+
+```{R}
+fat_testing_dm = model.matrix(siri ~ ., fat_testing)[,-c(1)]
+
+# Linear Model
+defaultSummary(data.frame(obs=fat_testing$siri, pred=predict(fat_lm, fat_testing)))
+
+# Stepwise Two Way Ajusted R-Squared
+defaultSummary(data.frame(obs=fat_testing$siri, pred=predict(fat_ols_step_both$model, fat_testing)))
+
+# Ridge
+defaultSummary(data.frame(obs=fat_testing$siri, pred=c(predict(fat_ridge, s=fat_ridge_lambda_min, fat_testing_dm))))
+
+#Lasso
+defaultSummary(data.frame(obs=fat_testing$siri, pred=c(predict(fat_lasso, s=fat_lasso_lambda_min, fat_testing_dm))))
+
+# ElasticNet
+defaultSummary(data.frame(obs=fat_testing$siri, pred=c(predict(fat_en, s=fat_en_lambda_min, fat_testing_dm))))
+
+
+```
+The R-squared are lower in test, which may suggest overfitting. The Lasso has
+the lowest RMSE, and MAE, and highest R-squared. I would use Lasso.
+
+## Problem 2
+
+Use the fat data set in previous example by using the percentage of body fat, 
+siri, as the response and the other variables, except brozek and density as 
+potential predictors.
+
+a-)Fit the same model in question 1-a but now using Huber's robust method. 
+Comment on any substantial differences between this model and the least squares 
+fit.
+
+```{R}
+fat_huber = rlm(siri ~ ., fat_training)
+fat_hampel = rlm(siri ~ ., fat_training, psi=psi.hampel)
+fat_bisquare = rlm(siri ~ ., fat_training, psi=psi.bisquare)
+fat_rlm = data.frame(
+  idx = c(1:nrow(fat_training)),
+  huber = fat_huber$w,
+  hampel = fat_hampel$w,
+  bisquare = fat_bisquare$w
+)
+fat_rlm = fat_rlm[order(fat_rlm$huber),]
+head(fat_rlm)
+```
+
+b-)Identify which two cases have the lowest weights in the Huber fit. What is 
+unusual about these two points?
+
+```{R}
+fat_outlier_idxs = fat_rlm[1:6, "idx"]
+fat_outlier_residuals = fat_huber$residuals[fat_outlier_idxs]
+
+
+plot(
+  fat_huber$residuals,
+  pch = 19,
+  cex=0.25,
+  xlab="Residuals",
+  ylab = "",
+)
+
+points(fat_outlier_idxs[1:2], fat_outlier_residuals[1:2], col="red")
+points(fat_outlier_idxs[3:4], fat_outlier_residuals[3:4], col="orange")
+points(fat_outlier_idxs[5:6], fat_outlier_residuals[5:6], col="violet")
+```
+
+These points have the most extreme residual values.
+
+```{R}
+plot(
+  fat_training$weight, 
+  fat_training$siri, 
+  pch = 19, 
+  cex=0.25,
+  main="Weight vs. Siri",
+  xlab="Weight",
+  ylab="Siri"
+  )
+points(fat_training[fat_outlier_idxs[1:2],"weight"], fat_training[fat_outlier_idxs[1:2],"siri"],  col="red")
+points(fat_training[fat_outlier_idxs[3:4],"weight"], fat_training[fat_outlier_idxs[3:4],"siri"], col="orange")
+points(fat_training[fat_outlier_idxs[5:6],"weight"], fat_training[fat_outlier_idxs[5:6],"siri"], col="violet")
+```
+
+The most extreme huber weight corresponds to a row of maximum weight over all of 
+the data.
+
+c-)Plot weight (of the man) against height. Identify the two outlying cases. Are 
+these the same as those identified in the previous question? Discuss.
+
+```{R}
+plot(
+  fat_training$weight, 
+  fat_training$height, 
+  pch = 19, 
+  cex=0.25,
+  main="Weight vs. Height",
+  xlab="Weight",
+  ylab="Height"
+)
+points(
+  fat_training[fat_outlier_idxs[1:2],"weight"], 
+  fat_training[fat_outlier_idxs[1:2],"height"],  
+  col="red"
+)
+```
+
+The indices of the outliers point to at least one high leverage point in the
+weight vs height chart.

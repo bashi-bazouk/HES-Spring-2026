@@ -1,0 +1,72 @@
+---
+title: 'CSCI E-106:Assignment 7'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Due Date: March 27, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+
+## Problem 1
+
+Using the fat data under faraway library,if you are using the R Studio, please use the command below to download the data:
+```{r}
+library(faraway)
+data(fat,package="faraway")
+str(fat)
+```
+
+If you are using Posit R Cloud instead of RStudio Desktop, please use the command below to download the data:
+
+```{r}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/fat.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(fat)
+```
+Take the fat data, and use the percentage of body fat, siri, as the response and the other variables, except brozek and density as potential predictors. (75 points) 
+
+
+a-) Create train and test data sets. Use 70% of the data for train data set and use remaining data (30% of data) for test data set (use set.seed(1023)). (5 points)
+
+**Use the train data sets to answer questions below**
+
+a-)Linear regression with all predictors and comment on the model performance (10 points)
+
+b-)Linear regression with variables selected using stepwise (both ways) selection criteria  (10 points)
+
+c-)Perform Ridge Regression and comment on the model performance (10 points)
+
+d-)Perform Lasso Regression and comment on the model performance (10 points)
+
+e-)Perform Elastic Net and comment on the model performance (10 points)
+
+**Use the test data sets to answer questions below**
+
+f-) Test the model's performances  for part a to part e above and comment of model stability and performance. Which model would you choice and why? (20 points)
+
+## Problem 2
+
+Use the fat data set in previous example by using the percentage of body fat, siri, as the response and the other variables, except brozek and density as potential predictors.(25 points)
+
+a-)Fit the same model in question 1-a but now using Huber's robust method. Comment on any substantial differences between this model and the least squares fit. (10 points)
+
+b-)Identify which two cases have the lowest weights in the Huber fit. What is unusual about these two points? (5 points)
+
+c-)Plot weight (of the man) against height. Identify the two outlying cases. Are these the same as those identified in the previous question? Discuss.(10 points)

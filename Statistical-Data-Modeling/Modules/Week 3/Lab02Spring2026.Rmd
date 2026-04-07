@@ -1,0 +1,154 @@
+---
+title: "CSCI E-106: Section 03 Spring 2025"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(faraway)
+
+```
+
+#You should  have solved something similar in the homework but lets see it again!
+# 1.20. Copier maintenance. 
+\textbf{The Tri-City Office Equipment Corporation sells an imported copier on a franchise basis and performs preventive maintenance and repair service on this copier. The data below have been collected from 45 recent calls on users to perform routine preventive maintenance service; for each call, X is the number of copiers serviced and Y is the total number of minutes spent by the service person. Assume that first-order regression model (1.1) is appropriate.}
+
+
+## \#Loading Data
+```{r problem 1.20 load data}
+# Load our data! Here we are loading a txt file so note the delim
+# Assigning the data to a data frame object
+# called df20 and then we want to name the columns
+
+
+df20 = read.delim("CH01PR20.txt", header=FALSE, sep="")
+colnames(df20) = c("y", "x")
+```
+
+## a Obtain the estimated regression function.
+### Solution
+
+```{r problem 1.20a}
+#this is our estimated regression function 
+lmFit20 = lm(y~x, df20)
+#lets look at our estimated regression function
+
+summary(lmFit20)
+```
+We see that to obtain our estimated regression function we would use the estimate column values so our answer would become: y= -.5802 + 15.0352x 
+
+
+## b. Plot the estimated regression function and the data. How well does the estimated regression function fit the data?
+
+### Solution
+
+```{r problem 1.20b}
+#here we will plot our estimated regression function 
+plot(df20$x, df20$y, ylab="Minutes", xlab="Copiers")
+
+#here is our best fit line on our regression. We can look at our outliers & decide if the relationship is linear.
+abline(lmFit20)
+```
+
+By just looking at our data we do have a well fit line here - so it is looking to be linear with no outliers. 
+
+## c. Write down your standard error of the slope and intercept. 
+
+### Solution
+
+```{r problem 1.20c}
+#calculate your standard error 
+coef(summary(lmFit20))[, "Std. Error"]
+
+#or you can show this with your summary
+summary(lmFit20)
+
+```
+
+## d. How does our model perform?
+
+### Solution
+
+```{r problem 1.20d}
+library(caret)
+#we can use predict to check on the future values based on the previous data and with the help of the linear model. This will help tell us how our model is performing over time.
+Predicted<-predict(lmFit20,df20)
+
+#once you predict - you want to see a summary
+#the defaultSummary() function in R is used to calculate 
+#and report standard performance metrics for regression models.
+
+Model<-data.frame(obs = df20$y, pred=Predicted)
+Model=defaultSummary(Model)
+print(Model)
+
+#from here we would expect you to look at the results and comment on your findings
+```
+
+## 2.05. Reference to Copier maintenance {.tabset}
+\textbf{The Tri-City Office Equipment Corporation sells an imported copier on a franchise basis and performs preventive maintenance and repair service on this copier. The data below have been collected from 45 recent calls on users to perform routine preventive maintenance service; for each call, X is the number of copiers serviced and Y is the total number of minutes spent by the service person. Assume that first-order regression model (1.1) is appropriate.}
+
+```{r problem 2.5 load data}
+# Load data
+df20 = read.delim("CH01PR20.txt", header=FALSE, sep="")
+colnames(df20) = c("y", "x")
+```
+## a. Estimate the change in the mean service time when the number of copiers serviced increases by one. Use a $90$ percent confidence interval. Interpret your confidence interval.
+
+```{r problem 2.5a}
+# Create linear model from data
+lmFit20 = lm(y~x, df20)
+print(summary(lmFit20))
+```
+
+So the estimated change in the mean service time when the number of copiers serviced increases by one is: 15.0352 which is the estimated slope ($b_1$) and the s($b_1$) is .4831
+
+
+```{r problem 2.5a-2}
+#Finding our t-distribution
+#In this case we want to first get our degrees of freedom which we can see from our summary is: 43 
+#or we can use our anova function to find the same
+anova(lmFit20)
+
+
+#We can find our t-distribution with our degrees of freedom
+tdist = qt(1-.10/2, 43)
+print(tdist)
+```
+
+```{r problem 2.5a-1}
+#Use a 90 Percent Confidence Interval
+confint(lmFit20, level=.9)
+
+#or you can write it all out without a function: 
+c(15.0352-1.6811*0.4831, 15.0352+1.6811*0.4831)
+```
+
+So our $b_1$ interval would be: 14.223 <= $b_1$ <= 15.847 90% of the time. 
+with $t$(.95,43): 1.681
+
+## b. Conduct a $t$ test to determine whether or not there is a linear association between $X$ and $Y$ here; control the a risk at $.10$. State the alternatives, decision rule, and conclusion. What is the $P-value$ of your test?
+
+$H_0$: $B_1$ = 0, $H_a$: $B_1 \neq 0$ 
+
+So our test statistic is: t = $b_1$ / SD($b_1$)= (15.0352 - 0) / .4831 
+Or you can see it above under t value of x
+
+```{r problem 2.5b}
+t = ( 15.0352 - 0 ) / .4831
+print(t)
+
+```
+
+The decision rule would be: reject $H_0$ if $t$ > 1.681 or reject $H_0$ if the p-value < .1 
+
+The conclusion: Reject the hypothesis 
+
+P-Value: P($t_{43}$ > 31.123) < 0.000001 or as seen in our summary: 2.2e-16 
+
+```{r problem 2.5b-1}
+#Calculate the p-value 
+p = 1-pt(31.122,43) 
+print(p)
+```

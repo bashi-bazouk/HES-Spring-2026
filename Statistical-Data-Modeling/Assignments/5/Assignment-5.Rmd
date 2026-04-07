@@ -1,0 +1,118 @@
+---
+title: 'CSCI E-106:Assignment 5'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Brian Ledger
+
+## Problem 1 
+
+\textbf{Refer to the CDI data set. The number of active physicians (Y) is to be regressed against total population , total personal income, land area and geographic region  ("Geographic region classification is that used by the U.S. Bureau of the Census, where: 1 = NE, 2 = NC, S = 3, W=4")}
+
+```{R}
+cdi_data = read.csv("CDI Data.csv")[,c(
+  "Number.of.active.physicians",
+  "Total.population",
+  "Total.personal.income",
+  "Land.area",
+  "Geographic.region"
+  )]
+```
+
+a-) \textbf{Create Dummy variables for Geographic Region.}
+
+```{R}
+cdi_data$Geographic.region = factor(
+  cdi_data$Geographic.region,
+  c(2,3,4,1),
+  c(".NC", ".S", ".W", ".NE"),
+  )
+```
+
+b-) \textbf{Fit a regression model by using all variables above.}
+
+```{R}
+cdi_lm = lm(Number.of.active.physicians ~ ., cdi_data)
+summary(cdi_lm)
+```
+
+\textbf{Comment on your model.}
+
+c-) \textbf{Test whether any geographic effects are present; use $\alpha$ = .10.}
+
+\textbf{State the alternatives, decision rule, and conclusion.}
+
+\textbf{What is the P-value of the test?}
+
+d-) \textbf{Check the constant variance assumption for the errors.}
+
+e-) \textbf{Check the normality assumption.}
+
+f-) \textbf{Check for large leverage points.}
+
+g-) \textbf{Check for outliers.}
+
+h-) \textbf{Check for influential points.}
+
+
+## Problem 2
+
+Using the ozone data under faraway library,if you are using the R Studio, please use the command below to download the data:
+```{r}
+library(faraway)
+data(ozone ,package="faraway")
+```
+
+
+Use O3 as the response and temp, humidity and ibh as predictors to answer the questions below. (30 points)
+
+a-) Create train and test data sets. Use 70% of the data for train data set and use remaining data (30% of data) for test data set (use set.seed(1023)). Build a regression model to predict O3 on the train data set. Write down the regression model and comment on the model performance. (5 points)
+
+b-) Visually by using the graphs, comments on regression model assumptions.(5 points)
+
+c-) Test the model performance on the test data and comment of model stability nd performance. (5 points)
+
+d-) Perform Breusch-Pagan Test, write down null and alternative hypotheses and your conclusion.(5 points)
+
+e-) Use the Box–Cox method to determine the best transformation on the response. if transformation is needed, perform the transformation and rebuild the model on the train data and check the model stability on the test data set. (10 points)
+
+
+## Problem 3
+
+### Commercial properties data set. 
+
+\textbf{A commercial real estate company evaluates vacancy rates, square 
+footage, rental rates, and operating expenses for commercial properties in a 
+large metropolitan area in order to provide clients with quantitative 
+information upon which to make rental decisions. The data are taken from 81 
+suburban commercial properties include the age (X1), operating expenses and 
+taxes (X2), vacancy rates (X3), total square footage (X4), and rental rates 
+(Y).}
+
+a-) \textbf{Fit regression model for four predictor variables to the data.}
+
+\textbf{State the estimated regression function.}
+
+b-) \textbf{Visually using the appropriate graphs, comment on the regression 
+model assumptions.}
+
+c-) \textbf{Divide the 81 cases into two groups. placing the 40 cases with the 
+smallest fitted values into group 1 and the remaining cases into group 2. 
+Conduct the Brown-Forsythe test.}
+
+d-) \textbf{Fit a second order model} ($Y = b_0 + b_1 X_1 +b_2 X_2 + b_3 X_3+b_4X_4+b_5X_{1}^{2}+b_6X_{2}^{2}+b_7X_{3}^{2}+b_8X_{4}^{2}+b_9X_{1}X_{2}+ b_{10}X_{1}X_{3}+b_{11}X_{1}X_{4}+b_{12}X_{2}X_{3}+b_{13}X_{2}X_{4}+
+b_{14}X_{3}X_{4}+b_{15}X_{1}X_{2}X_{3}+b_{16}X_{1}X_{2}X_{4}+
+b_{17}X_{2}X_{3}X_{4}+b_{18}X_{1}X_{2}X_{3}X_{4}+b_{19}X_{1}X_{3}X_{4}$)
+
+\textbf{Drop the insignificant variables from the model one at a time, refit the 
+model and repeat this until all the variables you have in the model are 
+significant.} 
+
+\textbf{Compare this again the model in part b)}

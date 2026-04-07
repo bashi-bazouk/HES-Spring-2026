@@ -1,0 +1,538 @@
+---
+title: 'CSCI E-106:Assignment 4 -- Solutions'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+Preparations (Libraries, basic functions)
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+knitr::opts_chunk$set(ECHO=TRUE)
+# STEP 0: Function to load or download libraries
+loadLib = function(libName)
+{
+    if(require(libName, character.only=TRUE))
+    {
+        ##cat(libName, "loaded properly\n")
+    } else {
+        cat("Installing", libName, "\n")
+        install.packages(libName)
+        if(require(libName, character.only=TRUE))
+        {
+            cat(libName, "loaded properly\n")
+        } else {
+            stop(c(libName, "not properly installed\n"))
+        }
+    }
+}
+
+libs = c("ggplot2","knitr","MASS","ggpubr","dplyr","tidyverse","faraway", 
+"rmarkdown", "markdown", "tidyr", "caret","readr","onewaytests","plyr",
+"lmtest","QuantPsyc","leaps","olsrr")
+
+for (lib in libs)
+{
+    loadLib(lib)
+}
+
+## Helper to get data sets from one location on my R Cloud project
+getDataSet <- function(dataset) {
+  datasets.loc <- "C:/Data/LAB1_Spring_2023/"
+  read.csv(paste0(datasets.loc,dataset,sep=""))
+}
+## Helper to display regression function with n coefficients
+dispRegFunc <- function(reg) {
+  coefs <- reg$coefficients
+  b0 = coefs[1]
+  n <- length(coefs)
+  my_formula <- paste0("Y = ", round(b0, digits = 6))
+  for (i in 2:n) {
+    my_formula <- paste0(my_formula, " + ", round(coefs[i],6), names(coefs)[i])
+  }
+  my_formula
+}
+set.seed(123)
+options("scipen" = 12)  ##Used to avoid displaying numbers such as 1+e3 (exponent), changing the options
+```
+
+### Due Date: February 27, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+
+
+## Problem 1
+
+Refer to Sales growth Data. (30 points, 10 points each)
+\## data preparation-Check
+data, check data quality to make your life easier
+
+```{r}
+#install.packages("visdat")
+library(visdat)
+
+sales.data<- read.csv("Sales Growth Data.csv")
+
+summary(sales.data)
+
+vis_miss(sales.data)
+
+# Looks OK
+```
+
+
+## a-) Divide the range of the predictor variable (coded years) into five bands of width 2.0, as follows: Band 1 ranges from X = -.5 to X = 1.5; band 2 ranges from X = 1.5 to X = 3.5; and so on. Determine the median value of X and the median value of Y in each band and develop the band smooth by connecting the five pairs of medians by straight lines on a scatter plot of the data. Does the band smooth suggest that the regression relation is linear? Discuss. 
+**CONCLUSION** See code below, the bands are very close to the line, some data points showed a slight upward slope shift at X values greater than 5.5 One can connect the five pairs of dots using the code below (black line). This includes a kind of smooth line inside the band, that suggests the linearity of the regression is applicable.
+
+<!-- Input solution below -->
+
+```{r}
+options("scipen" = 12)
+library(dplyr)
+#Step 1: Create bands
+sd.b1 <- dplyr::filter(sales.data, -.5<X, X<1.5)
+sd.b2 <- dplyr::filter(sales.data, 1.5<X, X<3.5)
+sd.b3 <- dplyr::filter(sales.data, 3.5<X, X<5.5)
+sd.b4 <- dplyr::filter(sales.data, 5.5<X, X<7.5)
+sd.b5 <- dplyr::filter(sales.data, 7.5<X, X<9.5)
+#Step 2: Find median X and Y of each band
+bands <- data.frame(
+  Median.X = c(median(sd.b1$X),median(sd.b2$X),median(sd.b3$X),median(sd.b4$X),median(sd.b5$X)), 
+  Median.Y = c(median(sd.b1$Y),median(sd.b2$Y),median(sd.b3$Y),median(sd.b4$Y),median(sd.b5$Y)),
+  row.names = c('b1', 'b2','b3', 'b4', 'b5')
+)
+
+#Step 3: Plot
+library(ggplot2)
+ggplot(sales.data) +
+    geom_point(aes(x=X, y=Y)) +
+    geom_line(data = bands, aes(x=Median.X, y=Median.Y))
+
+#Step 4: Create Neighborhoods
+n1 <- dplyr::filter(sales.data, -.5<X, X<1.5)
+n2 <- dplyr::filter(sales.data, 1.5<X, X<3.5)
+n3 <- dplyr::filter(sales.data, 3.5<X, X<5.5)
+n4 <- dplyr::filter(sales.data, 5.5<X, X<7.5)
+n5 <- dplyr::filter(sales.data, 7.5<X, X<9.5)
+
+#Step 5: Find yhat for each neighborhood
+yhat1 <- predict(lm(Y~X,n1), data.frame(X=median(n1$X)))
+yhat2 <- predict(lm(Y~X,n2), data.frame(X=median(n2$X)))
+yhat3 <- predict(lm(Y~X,n3), data.frame(X=median(n3$X)))
+yhat4 <- predict(lm(Y~X,n4), data.frame(X=median(n4$X)))
+yhat5 <- predict(lm(Y~X,n5), data.frame(X=median(n5$X)))
+
+#Step 6: Put result in dataframe
+neighborhoods <- data.frame(
+    Median.X = c(median(n1$X),median(n2$X),median(n3$X),median(n4$X),median(n5$X)), 
+    Y.hat = c(yhat1,yhat2,yhat3,yhat4,yhat5),
+    row.names = c('n1', 'n2','n3', 'n4', 'n5')
+)
+
+#Step 7: Plot with confidence band
+ggplot(sales.data) + 
+    geom_point(aes(x=X, y=Y)) + 
+    geom_line(data = neighborhoods, aes(x=Median.X, y=Y.hat)) +
+    geom_smooth(aes(x=X, y=Y), method = 'lm', formula = y~x)
+
+
+
+
+
+```
+
+<!-- End of solution -->
+
+## b-) Create a series of seven overlapping neighborhoods of width 3.0 beginning at X = -.5. The first neighborhood will range from X = -.5 to X = 2.5; the second neighborhood will range from X = .5 to X = 3.5; and so on. For each of the seven overlapping neighborhoods, fit a linear regression function and obtain the fitted value $\hat{Y_{c}}$ at the center $X_{c}$ of the neighborhood. Develop a simplified version of the lowess smooth by connecting the seven ($X_c$, $\hat{Y_{c}}$) pairs by straight lines on a scatter plot of the data. 
+**CONCLUSION** See code below. One can develop a simplified version of the Lowess smooth by connecting the seven pairs of dots obtained from the overlapping neighborhoods using the code below (black line).
+
+<!-- Input solution below --> 
+
+```{r, include=TRUE}
+options("scipen" = 12)
+#Step 1: Create bands
+sdb.b1 <- dplyr::filter(sales.data, -0.5<X, X<2.5)
+sdb.b2 <- dplyr::filter(sales.data, 0.5<X, X<3.5)
+sdb.b3 <- dplyr::filter(sales.data, 1.5<X, X<4.5)
+sdb.b4 <- dplyr::filter(sales.data, 2.5<X, X<5.5)
+sdb.b5 <- dplyr::filter(sales.data, 3.5<X, X<6.5)
+sdb.b6 <- dplyr::filter(sales.data, 4.5<X, X<7.5)
+sdb.b7 <- dplyr::filter(sales.data, 5.5<X, X<9.5) #to include the 9
+
+#Step 2: Find yhat for each neighborhood
+yhatb1 <- predict(lm(Y~X,sdb.b1), data.frame(X=1))
+yhatb2 <- predict(lm(Y~X,sdb.b2), data.frame(X=2))
+yhatb3 <- predict(lm(Y~X,sdb.b3), data.frame(X=3))
+yhatb4 <- predict(lm(Y~X,sdb.b4), data.frame(X=4))
+yhatb5 <- predict(lm(Y~X,sdb.b5), data.frame(X=5))
+yhatb6 <- predict(lm(Y~X,sdb.b6), data.frame(X=6))
+yhatb7 <- predict(lm(Y~X,sdb.b7), data.frame(X=7))
+
+#Step 2: Find median X and Y of each band
+simple.loess <- data.frame(
+  X = c(1,2,3,4,5,6,7), 
+  Y = c(yhatb1,yhatb2,yhatb3,yhatb4,yhatb5,yhatb6,yhatb7),
+  row.names = c('b1', 'b2','b3', 'b4', 'b5', 'b6', 'b7')
+)
+
+plot(simple.loess$X, simple.loess$Y, col="3")
+segments(simple.loess[1,1], simple.loess[1,2], simple.loess[2,1], simple.loess[2,2])
+segments(simple.loess[2,1], simple.loess[2,2], simple.loess[3,1], simple.loess[3,2])
+segments(simple.loess[3,1], simple.loess[3,2], simple.loess[4,1], simple.loess[4,2])
+segments(simple.loess[4,1], simple.loess[4,2], simple.loess[5,1], simple.loess[5,2])
+segments(simple.loess[5,1], simple.loess[5,2], simple.loess[6,1], simple.loess[6,2])
+segments(simple.loess[6,1], simple.loess[6,2], simple.loess[7,1], simple.loess[7,2])
+
+```
+<!-- End of solution -->
+
+## c-) Obtain the 95 percent confidence band for the true regression line and plot it on the plot prepared in part (b). Does the simplified lowess smooth fall entirely within the confidence band for the regression line? What does this tell you about the appropriateness of the linear regression function? 
+**CONCLUSION** See code below,the analysis of the R code above may be helpful. One can benefit from checking http://www.sthda.com/english/wiki/line-types-in-r-lty
+where a lot of options for graph are disclosed. See below code. Graphic shows
+the linear function may not be fully appropriate at this confidence level (when sales data is x=5 is out of the band).
+ 
+<!-- Input solution below -->
+
+```{r}
+sales.data.model <- lm(Y~X, data=sales.data)
+preds <- predict(sales.data.model, interval='confidence', level = 0.95)
+plot(sales.data$X, sales.data$Y)
+lines(sales.data$X, preds[ ,3], lty = 'solid', col = '7')
+lines(sales.data$X, preds[ ,2], lty = 'solid', col = '7')
+
+points(simple.loess$X, simple.loess$Y, col="3")
+segments(simple.loess[1,1], simple.loess[1,2], simple.loess[2,1], simple.loess[2,2])
+segments(simple.loess[2,1], simple.loess[2,2], simple.loess[3,1], simple.loess[3,2])
+segments(simple.loess[3,1], simple.loess[3,2], simple.loess[4,1], simple.loess[4,2])
+segments(simple.loess[4,1], simple.loess[4,2], simple.loess[5,1], simple.loess[5,2])
+segments(simple.loess[5,1], simple.loess[5,2], simple.loess[6,1], simple.loess[6,2])
+segments(simple.loess[6,1], simple.loess[6,2], simple.loess[7,1], simple.loess[7,2])
+
+```
+
+<!-- End of solution -->
+
+## Problem 2
+
+Using the ozone data under faraway library,if you are using the R Studio, please use the command below to download the data:
+```{r}
+library(faraway)
+data(ozone,package="faraway")
+```
+If you are using Posit R Cloud instead of RStudio Desktop, please use the command below to download the data:
+```{r}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/ozone.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(ozone)
+```
+
+Use O3 as the response and temp, humidity and ibh as predictors to answer the questions below. 
+(40 points)
+
+## a-) Create train and test data sets. Use 70% of the data for train data set and use remaining data (30% of data) for test data set (use set.seed(1023)). (5 points)
+**CONCLUSION** See code below.
+
+<!-- Input solution below -->
+
+```{r}
+library(faraway)
+library(caret)
+
+#First load data
+data(ozone,package="faraway")
+
+# Split the data into training and testing samples
+set.seed(1023) 
+#split the data into two parts 70-30 split
+DataSplit<-createDataPartition(y = ozone$O3, p = 0.7, list = FALSE)
+#creating the train and test data set
+ozone.train<-ozone[DataSplit,]
+ozone.test<-ozone[-DataSplit,]
+# always check if you have 70% 
+num_observations <- nrow(ozone)
+num_observations_train <- nrow(ozone.train)
+size_test <- (num_observations_train / num_observations)*100
+print(paste("Percentage in Train: ",size_test))
+# we conclude 71% is sufficiently close
+
+
+
+```
+
+<!-- End of solution -->
+
+## b-) Build a regression model to predict O3 on the train data set. Write down the regression model and comment on the model performance. (5 points)
+**CONCLUSION** "Y = -10.898198 + 0.33243temp + 0.07667humidity + -0.000965ibh" See code below, the graphs show the residuals vs. fitted shows that the errors does not seem randomly distributed or normal with evidence of non-linearity as indicated by the red line. The normal QQ plot shows evidence of fat tailsm although borderline. And lots of outliers. However the overall fit seems reasonable, predictors are significant using alpha of 0.0001 with a decent R2.
+
+<!-- Input solution below -->
+
+```{r}
+
+# Fit linear regression function
+model <- lm(O3  ~ temp + humidity + ibh, data = ozone.train)
+summary(model)
+dispRegFunc(model)
+# Obtain,  the  residuals  and  plot  them  against  the fitted values. Also prepare a normal probability plot.
+oldpar <- par(mfrow = c(2,2))
+plot(model, which = 1:2)
+par(oldpar)
+
+```
+
+<!-- End of solution -->
+
+## c-) Visually by using the graphs, comments on regression model assumptions.(5 points)
+**CONCLUSION** See code below,graph shows residual distribution with heavy tails. When inspecting the data it is clear that transformation may be needed given
+the ample dispersion of the response variable. The assumptions that seem to be challenged are the constant variance of the residuals and the linearity.
+
+Analysis
+***A1) Is normal linear regression model is appropriate for the problem?
+1.-Non linearity of Regression Function: The Residual Vs. Fitted plot show a curved relationship, confirming the regression function may be not-linear.
+2.-Non-constancy of the Error Variance. The pattern of the Residual vs. Fitted also seems to confirm that the variance is changing from left to right of the plot, specifically the extreme point on the right hand side seem more disperse.
+3.-Presence of outliers. The Residual vs. Leverage plot show there is at least one large outlier.
+*A2) Are the estimated errors (residuals) are independent from the Xs and from the estimated values Y_hat??
+4.-Non-independence of Error Terms. Residual vs. Fitted and the Scale Location plots show strong correlations among residuals.They do not seem independent at all.
+5.-Omission of Important Predictor or explanatory variables. Again all graphs show to us an omitted variable is disclosed by the residuals pattern, it is not random there is a systematic influence of the omitted variable here.
+*A3) Are the errors are iid~N(0,sigma)?? that is the errors are independent and identically normally distributed.
+6. Non-normality of the Residuals. The QQ plot shows deviations from the diagonal at the extremes, pointed to some non-normalities.
+<!-- Input solution below -->
+```{r, message=FALSE, warnings=FALSE}
+library(car)
+qqPlot(model, main = "QQ Plot")
+par(mfrow=c(2,2))
+plot(model)
+
+# Prepare a scatter plot of the data
+summary(model)
+```
+
+
+<!-- End of solution -->
+
+## d-) Test the model performance on the test data and comment of model stability nd performance. (5 points)
+**Conclusion:We confirm the fact that the outliers are influential observations because the model performance is better in the test data. Model is a little unstable and it may be probably under-fitted and one needs to do a little work around controlling outliers or transformation.
+
+<!-- Input solution below -->
+
+```{r}
+library(caret)
+PredictedTrain<-predict(model,ozone.train)
+ModelTrain<-data.frame(obs = ozone.train$O3, pred=PredictedTrain)
+Model_Train=defaultSummary(ModelTrain)
+
+PredictedTest<-predict(model,ozone.test)
+ModelTest<-data.frame(obs = ozone.test$O3, pred=PredictedTest)
+Model_Test=defaultSummary(ModelTest)
+
+g = rbind(Model_Train,Model_Test)
+g
+```
+
+<!-- End of solution -->
+
+## e-) Perform Breusch-Pagan Test, write down null and alternative hypotheses and your conclusion.(5 points)
+**CONCLUSION** We reject the null hypothesis of constant variance if the value of our test statistics is below a critical value, or equivalently if the p.value associated with our test statistics is below alpha = .05. Here we conclude that error variances are constant.
+
+<!-- Input solution below -->
+
+```{r}
+#We reject the null hypothesis as p.value is 0.00005463 < 0.05 - so, we conclude that the error variances are not constant.
+library(lmtest)
+bptest(model, studentize = FALSE)
+
+```
+
+<!-- End of solution -->
+
+## f-) Use the Box–Cox method to determine the best transformation on the response. if transformation is needed, perform the transformation and rebuild the model on the train data and check the model stability on the test data set. (15 points)
+**CONCLUSION** See code bellow because the best lambda is close to 0 (it is 0.24) we suggest to use a log transformation. However using structure and the confidence lines we see that 0 is out of range, sadly. The transformed model is stable once converted to the original units. Transformation helps, out of sample MSE, RMSE and R2 were better.
+
+
+<!-- Input solution below -->
+
+```{r}
+library(MASS)
+# To see more clearly the best value of lambda, we use an ample range
+bc=boxcox(model,lambda = seq(-2,2,0.1))
+# Narrowing our search
+bc=boxcox(model,lambda = seq(-0.5,0.5,0.01))
+best.lam=bc$x[which(bc$y==max(bc$y))]
+# Obtain the optima lambda
+best.lam
+
+model_Transformed<-lm(O3^(best.lam)  ~ temp + humidity + ibh, data = ozone.train)
+summary(model_Transformed)
+
+# Seems that model is slightly better in sample
+
+library(caret)
+PredictedTrain0<-predict(model_Transformed,ozone.train)
+# Reverse back the transformation you took (1/best.lam) so you must reverse
+PredictedTrain<-PredictedTrain0^(1/best.lam)
+# Now you have apples to apples
+ModelTrain<-data.frame(obs = ozone.train$O3, pred=PredictedTrain)
+Model_Train=defaultSummary(ModelTrain)
+## And on the test data
+PredictedTest0<-predict(model_Transformed,ozone.test)
+PredictedTest<-PredictedTest0^(1/best.lam)
+# Now you have apples to apples
+ModelTest<-data.frame(obs = ozone.test$O3, pred=PredictedTest)
+Model_Test=defaultSummary(ModelTest)
+
+g = rbind(Model_Train,Model_Test)
+g
+
+```
+
+<!-- End of solution -->
+
+## Problem 3
+
+Using the teengamb data under faraway library,if you are using the R Studio, please use the command below to download the data:
+```{r}
+library(faraway)
+data(teengamb ,package="faraway")
+```
+
+If you are using Posit R Cloud instead of RStudio Desktop, please use the command below to download the data:
+
+```{r}
+load(url("https://raw.githubusercontent.com/cran/faraway/master/data/teengamb.rda"))
+head(teengamb)
+```
+
+#Data Preparations: This data frame contains the following columns: sex 0=male, 1=female; status Socioeconomic status score based on parents' occupation; income in pounds per week; verbal verbal score in words out of 12 correctly defined; and, gamble expenditure on gambling in pounds per year.
+
+```{r, include=FALSE}
+#Step 0: Data Preparations
+#load necessary libraries
+library(faraway)
+library(dplyr)
+#load data
+data("teengamb")
+str(teengamb)
+#check for missing and NAs
+apply(teengamb ,2,function(x) sum(is.na(x))) 
+# development data set
+teengamb.data <- teengamb
+
+
+```
+
+Of note no missing points.Verbal look like factor and sex as dummy.
+
+## a-) Fit a model with gamble as the response and the other variables as predictors, and Visually by using the graphs, comments on regression model and assumptions. (10 points total).
+
+
+**CONCLUSION**The percentage of observations in the trains sample is 71% which seems reasonable, see code below.
+<!-- Input solution below -->
+```{r}
+options("scipen" = 12)  ##Used to avoid displaying numbers such as 1+e3 (exponent), changing the options
+
+
+# Fit linear regression function
+model <- lm(O3  ~ temp + humidity + ibh, data = ozone.train)
+summary(model)#Step 1: Construct your prediction model using your development sample
+teengame_model <- lm(gamble ~ factor(sex) + status + income + verbal, data=teengamb.data)
+# Obtain,  the  residuals  and  plot  them  against  the fitted values. Also prepare a normal probability plot.
+par(mfrow=c(2,2))
+plot(teengame_model, which = 1:2)
+dispRegFunc(teengame_model)
+
+
+```
+
+
+<!-- End of solution -->
+
+
+## b-) Predict the data(teengamb)amount that a male with average (given these data) status, income and verbal score would gamble along with an appropriate 95% CI (5 points).
+**CONCLUSION** There is support When we assume a 95% confidence or an alpha=0.05 and a male teen with average status, income and verbal score, the teen would loss or earn a gamble amount between -16.82649 (gamble income), and 76.37649 (gamble expense) given this data.
+
+
+<!-- Input solution below --> 
+
+```{r}
+options("scipen" = 12)
+
+# Step 2: Predict the data(teengamb)amount that a male with average..
+male_teen <- teengamb.data %>% filter(teengamb.data$sex == factor(0))
+predict(teengame_model, data.frame(sex=factor(0),
+status=mean(male_teen$status),
+income=mean(male_teen$income),
+verbal=mean(male_teen$verbal)),
+interval="predict",
+level=0.95)
+male_teen
+summary(teengame_model)
+#of note the variables verbal and status are not statistically different from zero
+#however we keep them because they must be included in the specification of the model
+
+```
+<!-- End of solution -->
+
+## c-) Repeat the prediction for a male with maximal values (for this data) of status, income and verbal score. Which CI is wider and why is this result expected? (5 points)
+
+
+**CONCLUSION** See code below,CI is wider, it is between 17.06588 and 125.55 given this data.This expected because greater status, income and verbal skills means that they can expense more money in gambling.
+
+<!-- Input solution below -->
+```{r}
+predict(teengame_model, data.frame(sex=factor(0),
+status=max(male_teen$status),
+income=max(male_teen$income),
+verbal=max(male_teen$verbal)),
+interval="predict",
+level=0.95)
+```
+<!-- End of solution -->
+
+
+
+## d-) Fit a model with sqrt (gamble) as the response but with the same predictors. Now predict the response and give a 95% prediction interval for the individual in (a). Take care to give your answer in the original units of the response (5 points).
+**CONCLUSION** See code below, One would expect a male with average status, income and verbal score to gamble about 19.28 pounds per year per our transformed model’s original units. The prediction interval is (0.01, 75.18) pounds per year. Interval is narrower as the mean teenager may expense on gambling.
+<!-- Input solution below -->
+
+```{r}
+teengame_model_transformed <- lm(sqrt(gamble) ~ factor(sex) + status + income + verbal, data=teengamb.data)
+pred_int <- predict(teengame_model_transformed, data.frame(sex=factor(0),
+status=mean(male_teen$status),
+income=mean(male_teen$income),
+verbal=mean(male_teen$verbal)),
+interval="predict",
+level=0.95)
+a<-pred_int
+#Reverse the transformation to obtain the interval in the original units
+a^2
+```
+
+<!-- End of solution -->
+
+## e-) Repeat the prediction for the model in (d) for a female with status=20, income=1, verbal = 10. Comment on the credibility of the result (5 points).
+
+**CONCLUSION** See code below, Results are not credible, as the left limit of the confidence interval is larger than the upper limit which is not correct.
+
+<!-- Input solution below -->
+```{r}
+teengame_model_transformed <- lm(sqrt(gamble) ~ factor(sex) + status + income + verbal, data=teengamb.data)
+pred_int2 <- predict(teengame_model_transformed,data.frame(sex=factor(1),                   status=20,
+income=1,
+verbal=10),
+interval="predict",
+level=0.95)
+b<-pred_int2
+#Reverse the transformation to obtain the interval in the original units
+b^2
+```
+
+<!-- End of solution -->

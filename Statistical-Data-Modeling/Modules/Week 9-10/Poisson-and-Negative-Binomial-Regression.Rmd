@@ -1,0 +1,58 @@
+---
+title: "Poisson Regression and Negative Binomial Regression"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Poisson Regression 
+
+Bikeshare data set contains the hourly and daily count of rental bikes between years 2011 and 2012 in Capital bikeshare system, along with weather and seasonal information. Please use "help(Bikeshare)" command for more information on the data set.
+
+
+Let's build a regression model to predict the number of bikers by using the data.
+
+```{r}
+require(ggplot2)
+require(sandwich)
+require(msm)
+#library(faraway)
+library(MASS)
+
+library(ISLR2)
+str(Bikeshare)
+dim(Bikeshare)
+names(Bikeshare)
+
+modp<- lm(
+    bikers ~ mnth + hr + workingday + temp + weathersit,
+    data = Bikeshare
+  )
+summary(modp)
+anova(modp,test="Chi")
+drop1(modp,test="Chi")
+
+```
+
+All variables except workingday are significant.   
+
+## Negative Binomial
+
+```{r}
+library(MASS)
+
+modn <- glm( bikers ~ mnth + hr + workingday + temp + weathersit,negative.binomial(1),data = Bikeshare)
+summary(modn)
+anova(modn,test="Chi")
+drop1(modn,test="Chi")
+
+pred.dat<-data.frame(cbind(Y=Bikeshare$bikers,Yhat_P=modp$fitted.values,Yhat_NP=modn$fitted.values))
+
+sum((pred.dat$Y-pred.dat$Yhat_P)^2)
+sum((pred.dat$Y-pred.dat$Yhat_NP)^2)
+
+```
+All variables are significant. Additionally, SSE for Poisson model is higher than the SSE for Negative Binomial model. Negative Binomial performs better than Poisson model.

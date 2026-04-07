@@ -1,0 +1,432 @@
+---
+title: "HARVARD EXTENSION SCHOOL"
+subtitle: "EXT CSCI E-106 Model Data Example Bad Data"
+tags: [practice fall 2025 Bad Data Solutions]
+geometry: margin=1.3cm
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 2
+  html_document:
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+## Helper to display regression function with n coefficients
+dispRegFunc <- function(reg) {
+  coefs <- reg$coefficients
+  b0 = coefs[1]
+  n <- length(coefs)
+  my_formula <- paste0("Y = ", round(b0, digits = 6))
+  for (i in 2:n) {
+    my_formula <- paste0(my_formula, " + ", round(coefs[i],6), names(coefs)[i])
+  }
+  my_formula
+}
+
+
+## Helper to get data sets from one location on my R Cloud project
+getDataSet <- function(dataset) {
+  datasets.loc <- "C:/Data/LAB1_Spring_2023/Quiz_zero/"
+  read.csv(paste0(datasets.loc,dataset,sep=""))
+}
+
+# Function to load or download libraries
+loadLib = function(libName)
+{
+    if(require(libName, character.only=TRUE))
+    {
+        ##cat(libName, "loaded properly\n")
+    } else {
+        cat("Installing", libName, "\n")
+        install.packages(libName)
+        if(require(libName, character.only=TRUE))
+        {
+            cat(libName, "loaded properly\n")
+        } else {
+            stop(c(libName, "not properly installed\n"))
+        }
+    }
+}
+
+libs = c("faraway", "ggplot2", "knitr", "MASS", "formatR", "onewaytests","glue", "olsrr","dplyr", "ALSM","reshape", "pander", "rmarkdown", "markdown", "tidyr", "GGally","ggpubr","glmnet","MASS", "lmtest","caret","fastDummies","magick","tinytex")
+
+for (lib in libs)
+{
+    loadLib(lib)
+}
+
+```
+##### Problem 1 
+
+Use the Longley data set, a data frame with 7 economical variables, observed yearly from 1947 to 1962: GNP.deflator; GNP implicit price deflator (1954=100); GNP Gross National Product; Unemployed
+number of unemployed; Armed.Forces number of people in the armed forces; Population ‘noninstitutionalized’ population 14 years of age or older; Year the year (time); Employed
+number of people employed. The regression lm(Employed ~ .) is known to be highly collinear.you need to cut and paste: require(stats); require(graphics) longley_data<-data.frame(longley).
+
+\**a. Linear regression with all predictors**\ 
+**Conclusion** The "Y = -3482.258635 + 0.015062GNP.deflator + -0.035819GNP + -0.020202Unemployed + -0.010332Armed.Forces + -0.051104Population + 1.829151Year" linear model using all variables  explains 99% of the change in the number of people employed (Employed). In this model, 3 variables are significant. These are unemployed, armed forces and year.**
+```{r}
+
+require(stats); require(graphics) 
+longley_data<-data.frame(longley)
+
+# Linear with all predictors
+longley.reg <- stats::lm(Employed ~ .,data=longley_data)
+summary(longley.reg)
+dispRegFunc(longley.reg)
+# Coefficients
+coeff.lm.df <- data.frame(Linear = longley.reg$coefficients)
+coeff.lm.df$Coefficients <- rownames(coeff.lm.df)
+rownames(coeff.lm.df) <- NULL
+coeff.lm.df <- dplyr::select(coeff.lm.df, Coefficients, Linear) 
+coeff.q1.df <-
+  coeff.lm.df %>%
+  dplyr::mutate(Linear = ifelse(Linear == 0, "--", scales::comma(Linear, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+```
+\newpage
+\**b. Linear regression with variables selected using stepwise (both ways) selection criteria**\ 
+**Conclusion** One need to input same random seed to ensure to arrive to the same answer. I used 1023. When using stepwise (both ways) the models is "Y = -1587.138908 -0.009955Unemployed + 0.847089Year"; and when using a significance level of 5%, two variables were added to the model. The first 3 variables added are the same as in step 1.a: GNP, Unemployed and Armed Forces. Only 2 remain, the stepwise model adds Year and Unemployed. Selection is nicely confirm by the elbow points in the graphs which indicate that model with 3 parameters is best.**
+
+```{r}
+set.seed(1023)
+longley.reg.both <- olsrr::ols_step_both_p(longley.reg, pent=0.35, prem=0.05, details=TRUE)
+
+plot(longley.reg.both)
+longley.reg.sw.final <- longley.reg.both$model
+summary(longley.reg.sw.final)
+dispRegFunc(longley.reg.sw.final)
+# Coefficients
+coeff.sw.df <- data.frame(Stepwise = longley.reg.sw.final$coefficients)
+coeff.sw.df$Coefficients <- rownames(coeff.sw.df)
+coeff.q1.df <-
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.sw.df, by = "Coefficients") %>%
+  dplyr::mutate(Stepwise = ifelse(dplyr::coalesce(Stepwise, 0) == 0, "--", 
+                                  scales::comma(Stepwise, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+```
+\newpage
+\**c. Ridge regression**\ 
+**Conclusion**  Ridge regression is used when there is multicolinearity among the variables. The maximum variance inflation factor of 1,788 confirms that this is the case as it its evidently higher than the threshold of 10 which is normally used to detect multicolinearity.**\newline
+**Several variables appear to be highly correlated with each other. GNP, Population, Year and GNP deflator appear to be the most prevalent ones but there are 10 pairs of variables with a correlation higher than 0.96 **\newline
+**The optimal lambda of the ridge regression is 0.334, and when we pass this argument in order to cross-validate the model, 2 of the coefficients (GNP and Population) are positive, while the remaining coefficients kept the same sign as the linear model. This is a change from the linear model that had a negative coefficients for GNP and Population.**
+```{r}
+set.seed(1023)
+olsrr::ols_vif_tol(longley.reg)
+longley.cor.df <- data.frame(stats::cor(longley_data))
+longley.cor.df$Predictor1 <- colnames(longley.cor.df)
+longley.cor.df <-
+  longley.cor.df %>%
+  reshape2::melt(id.vars = c('Predictor1'), variable.name = 'Predictor2', value.name = 'Correlation') %>%
+  dplyr::filter(Correlation >= 0.8 & Predictor1 != Predictor2) %>%
+  dplyr::arrange(desc(Correlation)) %>%
+  dplyr::filter(dplyr::row_number() == 1 | dplyr::lag(Correlation, 1) != Correlation)
+knitr::kable(longley.cor.df, caption = "Highly Correlated Predictors")
+
+# Separate x and y
+x <- data.matrix(dplyr::select(longley, -Employed))
+y <- longley$Employed
+
+# Cross Validate and calculate best lambda
+longley.ridge.cv <- glmnet::cv.glmnet(x, y, alpha=0, nlambda=100,lambda.min.ratio=0.0001)
+best.lambda.ridge <- longley.ridge.cv$lambda.min
+plot(longley.ridge.cv)
+
+print(paste0("Ridge best lambda of ", round(best.lambda.ridge, digits = 3)))
+
+# Coefficients Best Lambda
+coeff.ridge.df <- stats::coef(longley.ridge.cv , s = best.lambda.ridge)
+coeff.ridge.df <- data.frame(Coefficients = coeff.ridge.df@Dimnames[[1]],
+                             Ridge = coeff.ridge.df@x)
+coeff.q1.df <-
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.ridge.df, by = "Coefficients") %>%
+  dplyr::mutate(Ridge = ifelse(dplyr::coalesce(Ridge, 0) == 0, "--", 
+                               scales::comma(Ridge, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+```
+
+\newpage
+\**d. Lasso**\ 
+**Conclusion**Lasso regression is another method to address multicolinearity, which was confirmed in 1.c. The optimal lambda of the lasso regression is 0.008, and when we pass this argument in order to cross-validate the model, 3 predictors (GNP, GNP deflator and Population) are not significant. And the remaining coefficients kept similar signs to the linear regression.**
+
+```{r}
+set.seed(1023)
+# Cross Validate and calculate best lambda
+reg.lasso.cv <- glmnet::cv.glmnet(x, y, alpha=1, nlambda=100, lambda.min.ratio=0.0001)
+best.lambda.lasso <- reg.lasso.cv$lambda.min
+plot(reg.lasso.cv)
+print(paste0("Lasso best lambda of ", round(best.lambda.lasso, digits = 3)))
+
+# Coefficients
+coeff.lasso <- stats::coef(reg.lasso.cv, s = "lambda.min")
+coeff.lasso.names <- coeff.lasso@Dimnames[[1]]
+coeff.lasso.df <- data.frame()
+for (i in 1:length(coeff.lasso)) {
+  df <- data.frame(Coefficients = coeff.lasso.names[i],
+                   Lasso = coeff.lasso[i])
+  coeff.lasso.df <- rbind(df, coeff.lasso.df)
+}
+coeff.q1.df <-
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.lasso.df, by = "Coefficients") %>%
+  dplyr::mutate(Lasso = ifelse(dplyr::coalesce(Lasso, 0) == 0, "--", 
+                               scales::comma(Lasso, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+rm(df)
+```
+
+\newpage
+\**e. Elastic Net**\ 
+**Conclusion** Elastic Net regression is another method to address multicolinearity, which was confirmed in 1.c. The optimal lambda of the Elastic Net regression is 0.005, and when we pass this argument in order to cross-validate the model the results are similar to the Lasso regression. 1 predictor (GNP) is not significant. The remaining coefficient's signs are similar to the linear regression and to the lasso regression.**
+```{r}
+set.seed(1023)
+# Cross Validate and calculate best lambda
+reg.enet.cv <- glmnet::cv.glmnet(x, y, alpha=0.5, nlambda=100, lambda.min.ratio=0.0001)
+best.lambda.enet <- reg.enet.cv$lambda.min
+print(paste0("ElasticNet best lambda of ", round(best.lambda.enet, digits = 3)))
+
+# Coefficients
+coeff.en <- stats::coef(reg.enet.cv, s = best.lambda.enet)
+coeff.en.names <- coeff.en@Dimnames[[1]]
+coeff.en.df <- data.frame()
+for (i in 1:length(coeff.en)) {
+  df <- data.frame(Coefficients = coeff.en.names[i],
+                   ElasticNet = coeff.en[i])
+  coeff.en.df <- rbind(df, coeff.en.df)
+}
+coeff.q1.df <- 
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.en.df, by = "Coefficients") %>%
+  dplyr::mutate(ElasticNet = ifelse(dplyr::coalesce(ElasticNet, 0) == 0, "--", 
+                                    scales::comma(ElasticNet, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+rm(df)
+```
+
+\newpage
+\**f. Robust Regression**\ 
+**Conclusion** Robust regression is way to address influential observations or outliers in the data. By plotting the Cook's distance, we can confirm that there is one influential observation. Observation 5 is the clearest example of influential observation. Five predictors have negative coefficients, while Year is positive. In this regards, the robust regression is unlike the others, which all have GNP deflator as having a positive coefficient.**
+```{r}
+set.seed(1023)
+# Influential observations
+olsrr::ols_plot_resid_lev(longley.reg)
+longley_data %>%
+  dplyr::mutate(Observation = dplyr::row_number()) %>%
+  dplyr::select(Observation, Employed) %>%
+  cbind(dplyr::select(data.frame(stats::influence.measures(longley.reg)$infmat), cook.d)) %>% 
+  dplyr::arrange(desc(cook.d)) %>%
+  dplyr::filter(cook.d >= 0.04) %>%
+  knitr::kable(caption = "Influential Observations", row.names = FALSE)
+olsrr::ols_plot_cooksd_chart(longley.reg)
+
+# Huber Robust Regression
+longley.reg.huber <- MASS::rlm(Employed ~ ., psi = psi.huber, data = longley)
+summary(longley.reg.huber)
+
+# Coefficients
+coeff.huber.df <- data.frame(Huber = longley.reg.huber$coefficients)
+coeff.huber.df$Coefficients <- rownames(coeff.huber.df)
+coeff.q1.df <-
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.huber.df, by = "Coefficients") %>%
+  dplyr::mutate(Huber = ifelse(dplyr::coalesce(Huber, 0) == 0, "--",
+                               scales::comma(Huber, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+```
+
+\newpage
+\**g. Use the models you find to predict the response. Make a nice report on the performances of the models.**\ 
+**Conclusion** Huber's robust regression performed the best, although both Ridge and Lasso regressions performed almost as well. These 3 regressions explain over 87% of the change in Y. This is intuitive since there are a lot of variables that are correlated with each other as we saw in 1.c. Elastic Net performed a bit worse than the stepwise regression. They explain around 75% of the change in Y.**
+
+```{r}
+set.seed(1023)
+Employed.predictors <- colnames(dplyr::select(longley, -Employed))
+longley_data$Employed.lm <- stats::predict(longley.reg, longley_data)
+longley_data$Employed.sw.lm <- stats::predict(longley.reg.sw.final, longley_data)
+longley_data$Employed.ridge <-
+  stats::predict(longley.ridge.cv, s = best.lambda.ridge, 
+                 newx = data.matrix(longley_data[Employed.predictors]))[,1]
+longley_data$Employed.lasso <-
+  stats::predict(reg.lasso.cv, s = best.lambda.lasso, 
+                 newx = data.matrix(longley_data[Employed.predictors]))[,1]
+longley_data$Employed.en <-
+  stats::predict(reg.enet.cv, s = best.lambda.enet, 
+                 newx = data.matrix(longley_data[Employed.predictors]))[,1]
+longley_data$Employed.huber <- stats::predict(longley.reg.huber, longley_data)
+
+# SST, SSE, and R2
+sst <- sum((longley_data$Employed - mean(longley_data$Employed))^2)
+sse.lm <- sum((longley_data$Employed - longley_data$Employed.lm)^2)
+sse.sw <- sum((longley_data$Employed - longley_data$Employed.sw.lm)^2)
+sse.ridge <- sum((longley_data$Employed - longley_data$Employed.ridge)^2)
+sse.lasso <- sum((longley_data$Employed - longley_data$Employed.lasso)^2)
+sse.enet <- sum((longley_data$Employed - longley_data$Employed.en)^2)
+sse.huber <- sum((longley_data$Employed - longley_data$Employed.huber)^2)
+data.frame(Model = c('Linear', 'Stepwise', 'Ridge', 'Lasso', 'Elastic Net', 'Huber'),
+           R2 = c(round(1 - sse.lm / sst, digits = 4),
+                  round(1 - sse.sw / sst, digits = 4),
+                  round(1 - sse.ridge / sst, digits = 4),
+                  round(1 - sse.lasso / sst, digits = 4),
+                  round(1 - sse.enet / sst, digits = 4),
+                  round(1 - sse.huber / sst, digits = 4)),
+           MSE = c(round(sse.lm / nrow(longley_data), digits = 4),
+                  round(sse.sw / nrow(longley_data), digits = 4),
+                  round(sse.ridge / nrow(longley_data), digits = 4),
+                  round(sse.lasso / nrow(longley_data), digits = 4),
+                  round(sse.enet / nrow(longley_data), digits = 4),
+                  round(sse.huber / nrow(longley_data), digits = 4))) %>%
+  dplyr::arrange(desc(R2)) %>%
+  knitr::kable(caption = "R2 of Different Models")
+```
+\newpage
+
+## Problem 2
+
+Use the Longley data set in previous example by using the GNP per capita, Employed, as the response and the other variables, except GNP and Polulation as potential predictors.
+
+\**a. Fit the same model in question 1-a but now using Huber's robust method. Comment on any substantial differences between this model and the least squares fit.**\ 
+**Conclusion** In 1.c, we found that there are several variables that are highly correlated with each other.  Here, the regression is "Y = -1795.61099 + 0.14968GNP.Per.Capita + -0.014569Unemployed + -0.007687Armed.Forces + -0.00966GNP.deflator + 0.955783Year". The coefficient for GNP.deflator changed sign but the others have similar sign and size.**
+
+```{r}
+# Data Preparations
+
+GNPPC<-data.frame(longley_data$GNP/longley$Population)
+
+# New Predictors
+Employed.predictors2 <- cbind(GNPPC,longley_data$Unemployed,longley_data$Armed.Forces,longley_data$GNP.deflator,longley_data$Year)
+#New Data
+longley2<-cbind(longley_data$Employed,Employed.predictors2)
+colnames(longley2)<-c("Employed","GNP.Per.Capita","Unemployed","Armed.Forces","GNP.deflator","Year")
+
+# Least Squares using full data
+longley.reg.full2 <- stats::lm(Employed ~ ., data = longley2)
+summary(longley.reg.full2)
+dispRegFunc(longley.reg.full2)
+# Huber's robust method using full data
+reg.huber.full2 <- MASS::rlm(Employed ~ ., psi = psi.huber, data = longley2)
+summary(reg.huber.full2)
+dispRegFunc(reg.huber.full2)
+# Coefficients
+coeff.q2.df <- data.frame(Linear = longley.reg.full2$coefficients)
+coeff.q2.df$Coefficients <- rownames(coeff.q2.df)
+rownames(coeff.q2.df) <- NULL
+coeff.q2.huber.df <- data.frame(Huber = reg.huber.full2$coefficients)
+coeff.q2.huber.df$Coefficients <- rownames(coeff.q2.huber.df)
+coeff.q2.df <-
+  coeff.q2.df %>%
+  dplyr::select(Coefficients, Linear) %>%
+  dplyr::left_join(coeff.q2.huber.df, by = "Coefficients") %>%
+  dplyr::mutate(Diff = round(abs(Linear - Huber), digits = 4),
+                Linear = ifelse(Linear == 0, "--", scales::comma(Linear, accuracy = 1e-4)),
+                Huber = ifelse(dplyr::coalesce(Huber, 0) == 0, "--",
+                               scales::comma(Huber, accuracy = 1e-4))) %>%
+  dplyr::arrange(desc(Diff))
+knitr::kable(coeff.q2.df, caption = "Model Coefficients")
+
+# SST, SSE, and R2
+sst.q2 <- sum((longley_data$Employed - mean(longley_data$Employed))^2)
+sse.q2.lm <- sum(longley.reg.full2$residuals^2)
+sse.q2.huber <- sum(reg.huber.full2$residuals^2)
+data.frame(Model = c('Linear', 'Huber.Robust'),
+           R2 = c(round(1 - sse.q2.lm / sst.q2, digits = 4),
+                  round(1 - sse.q2.huber / sst.q2, digits = 4)),
+           MSE = c(round(sse.q2.lm / nrow(fat), digits = 4),
+                   round(sse.q2.huber / nrow(fat), digits = 4))) %>%
+  knitr::kable(caption = "R2 of Different Models")
+```
+
+\newpage
+
+\**b. Identify which two cases have the lowest weights in the Huber fit. What is unusual about these two points? **\ 
+**Conclusion** The two lowest weights belong to observations 10 and 16. What I find unusual about point 10 is that it does not have a large Cook's distance, however observation 16 has the largest Cook's distance as expected.**
+
+```{r}
+olsrr::ols_plot_resid_lev(longley.reg.full2)
+olsrr::ols_plot_cooksd_chart(longley.reg.full2)
+
+# Huber Weights
+longley2$weights <- reg.huber.full2[["w"]]
+
+# Lowest Weights
+longley2 %>%
+  dplyr::mutate(Observation = dplyr::row_number()) %>%
+  dplyr::arrange(weights) %>%
+  dplyr::filter(dplyr::row_number() <= 5) %>%
+  dplyr::select(Observation, Employed, weights) %>%
+  knitr::kable(caption = "Observations with 5 Lowest Weights", row.names = FALSE)
+```
+
+\newpage
+
+\**c. Plot Unemployed (number of unemployed) against Year (time). Identify the two outlying cases. Are these the same as those identified in the previous question? Discuss.**\ 
+**Conclusion** The two outliers are observations 10 and 16. Ont of them was previously identified as being influential observation and both are outliers. However, only observation 16 was found to have a high number of unemployed in its year. Observation 10, has a moderate number of unemployed, and is an outlier, but does not show up to have unusual patter in this graph.**
+```{r}
+# Deleted Studentized Residual
+longley2$del.stud.res <- abs(stats::rstudent(longley.reg.full2))
+alpha <- 0.05
+n <- nrow(longley2)
+p <- length(longley.reg.full2$coefficients)
+longley2$t.val <- abs(stats::qt(1-alpha/(2*n), n-p-1))
+
+longley2 %>%
+  dplyr::mutate(Observation = dplyr::row_number()) %>%
+  dplyr::arrange(desc(del.stud.res)) %>%
+  dplyr::filter(del.stud.res >= t.val) %>%
+  dplyr::select(Observation, Employed, del.stud.res, t.val) %>%
+  knitr::kable(caption = "Influential Observations", row.names = FALSE)
+
+# Plot
+ggplot2::ggplot(longley2, ggplot2::aes(x=Year, y=Unemployed)) +
+  ggplot2::geom_point() + # Show dots
+  ggplot2::geom_text(
+    label=rownames(longley2),
+    nudge_x = 0.25, nudge_y = 0.25,
+    check_overlap = T)
+```
+
+
+```{r}
+
+##### CODE FROM HAKAN #####
+
+# cutoff.prg<-function(pred,act){
+## pred<-predicted_probabilities
+## act<-true_labels
+# p<-seq(0,1,0.01)
+# n<-length(p)
+# out<-matrix(0,nrow=n,ncol=12)
+# for(i in 1:n){
+# predictions <- ifelse(pred >p[i], 1, 0)
+# confusion_matrix <- confusionMatrix(as.factor(predictions),as.factor(act),mode="prec_recall", positive = "1")
+# out[i,]<-cbind(p=p[i],t(confusion_matrix[[4]]))
+# }
+# dimnames(out)[[2]]<-c("p","Sensitivity","Specificity","Pos Pred Value","Neg Pred Value","Precision","Recall", "F1","Prevalence","Detection Rate","Detection Prevalence", "Balanced Accuracy")
+# out
+# }
+
+# test<-cutoff.prg(predicted_probabilities,true_labels)
+# plot(test[,1],test[,8],xlab="cut off",ylab="F1")
+# test[which.max(test[,8]),]
+
+########### Extra CODE ################
+
+# >install.packages("OptimalCutpoints")
+# >library(OptimalCutpoints)
+# ># Fit your logistic regression model
+# >my_model <- glm(y ~ x1 + x2, data = my_data, family = "binomial")
+# ># Calculate predicted probabilities
+# >predicted_probs <- predict(my_model, type = "response")
+# ># Find optimal cut-off based on equality of sensitivity and specificity
+# >optimal_cut <- optimise.cutpoint(obs = my_data$y, pred = predicted_probs, criterion  >#"both")
+# ># Access the optimal cut-off point
+# >optimal_cut$threshold
+
+
+```

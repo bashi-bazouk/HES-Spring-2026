@@ -1,0 +1,86 @@
+---
+title: 'CSCI E-106:Assignment 6'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Due Date: March 13, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+
+## Problem 1
+
+Using the divusa data under faraway library,if you are using the R Studio, please use the command below to download the data:
+```{r}
+library(faraway)
+data(divusa,package="faraway")
+str(divusa)
+```
+
+If you are using Posit R Cloud instead of RStudio Desktop, please use the command below to download the data:
+
+```{r}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/divusa.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(divusa)
+```
+
+
+(20 points, 5 points each) 
+
+a-) Fit a regression model with divorce as the response and unemployed, femlab, marriage, birth and military as predictors. 
+
+b-) For the same model, compute the VIFs. Is there evidence that collinearity causes some predictors not to be significant? Explain. 
+
+c-) Does the removal of insignificant predictors from the model reduce the collinearity? Investigate.
+
+d-) Visually using the appropriate graphs, comment on the regression model assumptions. 
+
+
+## Problem 2
+
+Refer to the Machine speed Data, showing the number of defective items produced by a machine (Y) and the speed setting of the machine (X). Answer the questions below. (30 points, 5 points each)
+
+
+a-) Fit a linear regression function by ordinary least squares, obtain the residuals, and plot the
+residuals against X. Plot the squared residuals against X. What do the plots suggest? (10 points)
+
+b-) Conduct the Breusch-Pagan test for constancy of the error variance,  use $\alpha$ = .10. State the alternatives, decision rule, and conclusion. (5 points)
+
+c-)  Calculate the weights for  weighted least square estimation and refit the model.(5 points)
+
+d-)  Are the weighted least squares estimates of $\beta_0$ and $\beta_1$ similar to the ones obtained with ordinary least squares in part (a)?(5 points)
+
+e-) Compare the estimated standard deviations of the weighted least squares estimates b$\beta_{w0}$ and $\beta_{w1}$in part (c) with those for the ordinary least squares estimates in part (a). What do you find?(5 points)
+
+f-) Iterate the steps in parts (c) one more time. Is there a substantial change in the
+estimated regression coefficients? If so, what should you do?(5 points)
+
+## Problem 3
+
+Refer to the CDI data set used in Assignment 5. For this analysis, use all variables except Identification Number, County, and State. In addition, include the dummy variables you created for Geographic Region in Question 1(a) of Assignment 5, and remove the original Geographic Region variable. The dependent variable is the number of active physicians (Y), which should be regressed on all remaining variables, including the geographic‑region dummy variables.(50 points)
+
+a-) Use a stepwise variable selection method to identify the best regression model. Then evaluate the model assumptions using appropriate diagnostic plots and comment on whether the assumptions appear to be satisfied. (10 points)
+
+b-) The CDI data set contains 440 observations. Randomly divide the data into five folds, each containing 88 observations, using set.seed(1023) to ensure reproducibility. Perform 5‑fold cross‑validation to assess the stability of your selected model in part a. For each fold, report the following metrics for both the training and testing sets:\newline
+- Root Mean Squared Error (RMSE)\newline
+- R‑squared (R²)\newline
+- Mean Absolute Error (MAE)\newline
+
+Summarize the results across all five folds and comment on the model’s stability and predictive performance. (40 Points)

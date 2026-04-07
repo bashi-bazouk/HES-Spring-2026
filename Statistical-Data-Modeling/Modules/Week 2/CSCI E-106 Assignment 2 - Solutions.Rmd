@@ -1,0 +1,252 @@
+---
+title: 'CSCI E-106:Assignment 2 - Solutions'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+Preparations (Libraries, basic functions)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+## Helper to display regression function with n coefficients
+dispRegFunc <- function(reg) {
+  coefs <- reg$coefficients
+  b0 = coefs[1]
+  n <- length(coefs)
+  my_formula <- paste0("Y = ", round(b0, digits = 6))
+  for (i in 2:n) {
+    my_formula <- paste0(my_formula, " + ", round(coefs[i],6), names(coefs)[i])
+  }
+  my_formula
+}
+##Used to avoid displaying numbers such as 1+e3 (exponent), changing the options
+options("scipen" = 12)  
+# Special thanks to Ian Kelk for writing these functions.
+```
+
+### Due Date: February 13, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+
+
+## Problem 1 
+
+Refer to the CDI data set.  Use the number of active physicians as Y and total personal income as X. (50 points)
+## data preparation-Check data, rename variables and select only the variables you plan to use to make your life easier
+
+```{r}
+
+PMQ1<- read.csv("CDI Data.csv")
+
+summary(PMQ1)
+Y <- PMQ1$Number.of.active.physicians
+X <- PMQ1$Total.personal.income
+
+CDI_data<-data.frame(cbind(Y,X))
+```
+
+
+#a-) Built a regression model to predict Y by using X. Write down the stand error of the slope and intercept. (5 points)
+
+**CONCLUSION**  Using the R-lm() function, we built "Y = -48.394849 + 0.131701X", we then extracted the values of the slope and the intercept estimates and their corresponding standard errors from the summary(model) object and then we illustrated the results in the Table below. 
+
+
+<!-- Input solution below --> 
+
+```{r}
+model<-lm(Y ~ X, data = CDI_data)
+Estimate_b0<-coef(summary(model))[1, "Estimate"]
+Estimate_b1<-coef(summary(model))[2, "Estimate"]
+
+StandardErr_b0<-coef(summary(model))[1, "Std. Error"]
+StandardErr_b1<-coef(summary(model))[2, "Std. Error"]
+
+print(paste("Estimate b0: ",Estimate_b0))
+print(paste("Estimate b1: ",Estimate_b1))
+
+print(paste("Standard error b0: ",StandardErr_b0))
+print(paste("Standard error b1: ",StandardErr_b1))
+# Print the equation (refer to lines above)
+dispRegFunc(model)
+```
+<!-- End of solution -->
+
+#b-) Are the slope and intercept statistically significant?  Write down your null and alternative hypothesis and p value of the test. Calculate the 95% Confidence interval for the slope. (20 points)
+
+**CONCLUSION**  Using an alpha = 0.05, Intercept is not significant but the slope is significant. To do this test, one may apply the six steps below and we calculated the confidence interval for the slope:
+2.5 %    97.5 % 
+0.1275537 0.1358487 using the code below:
+
+Step 1: Write down your null and alternative hypothesis
+H_0: Regression parameters(i) is equal to zero
+H_a: Regression parameters(i) is not equal to zero
+
+Step 2: Identify the appropriate tests statistics.
+
+Step 3: Specify the level of significance: if not given in the problem use an alpha=0.05 
+
+Step 4: Decision Rule for the test:
+We reject the null hypothesis if the calculated t-statistic is larger than the absolute value of the t critical value.
+
+Step 5: Calculate the test statistic.
+
+Step 6: Make the Decision.
+<!-- Input solution below --> 
+
+```{r, include=FALSE}
+#Step 1: H0: intercept =0, HA: intercept is not 0
+#        H0: slope=0     , HA: slope is not 0
+#Step 2: for testing individual coefficients on a sample one may use a #two sides t statistical test.
+#Step 3: the critical t -value applicable given alpha=0.05 and n-2 #degrees of freedom.
+#Step 4: decision rule, when t > t critical reject null
+#Step 5: calculate t statistic
+#First define the significance level — the probability of rejecting the null hypothesis when it is actually true (alpha is the Type I error). That is the % error you are willing to accept.
+alpha = 0.05
+# Second, to calculate the confidence level, you divide by 2 because it is a two tail test
+half_alpha = alpha / 2
+# Third: Calculate the degrees of freedom is n - p, that is the number of parameters
+df<-nrow(CDI_data) - nrow(summary(model)$coefficients)
+# Fourth : Determine the critical t value using the df and the significance levels
+value<-formatC(qt(half_alpha,df,lower.tail=FALSE))    
+print(paste("Critical T values: ",value))
+#coefficients
+matrix_coef <- round(summary(model)$coefficients,5)  # Extract coefficients in matrix
+matrix_coef   
+
+my_estimates <- round(matrix_coef[ , 1],5)  # Matrix manipulation to extract estimates
+#Step 6: For the Intercept, p-value is 0.12917, Pr(>|t|) > 0.05 there no sufficient statistical evidence to reject Ho. For the slope, Pr(>|t|) < 0.05 there is sufficient statistical evidence to reject null. Also t-values (-1.52 and 62.41) confirm, the first is smaller than the 1.965 critical values and the other is larger than t-critical of 1.965
+# Get 95% confidence intervals for all coefficients (default)
+intervals <- confint(model)
+# The confidence interval for the slope (X)
+slope_interval <- intervals["X", ]
+print(slope_interval)
+```
+
+| Parameter | Estimate   | Std.Error | t statistic| t critical| p-value |  Decision  | 
+|-----------|------------|-----------|------------|-----------|---------|------------|
+| Intercept | -48.394849 |31.83332818| -1.52026   |  1.965    | 0.12917 |  Accept H0 |
+| Slope     | 0.131701   |0.002110279| 62.40937   |  1.965    | 0.00000 |  Reject H0 |
+<!-- End of solution -->
+
+#c-) Predict the number of active physicians for total personal income of 100000,250000 and 50000. Calculate the 95% confidence interval (Hint: Use the range of total personel income to identify which observations are within the range of the training data) (20 points)
+
+
+**CONCLUSION**  Using an alpha = 0.05, the Doctors given the incomes within
+the range and corresponding confidence intervals are:
+       fit      lwr      upr
+ 6,536.665 6353.955 6719.374
+       fit     lwr      upr
+ 13,121.72 12735.9 13507.55
+And for the income outside the range
+      fit      lwr      upr
+ 32,876.9 31371.92 34381.89
+See code below
+<!-- Input solution below --> 
+
+```{r}
+options("scipen" = 12)
+# Step 1: Find the range of the personal income to see if 100000,250000 and 50000 are included.
+range_values<-range(X)
+maximum <-max(X)
+# Step 2: 95% CI for the estimated mean within range
+# 100000 and 50000 are in range, so when predicting we are interpolating within development data
+ci<-predict(model, data.frame(X=50000), interval = "confidence", level=0.95)
+ci
+
+ci <- predict(model, data.frame(X=100000),interval = "confidence", level = 0.95)
+ci
+# Step 3: 95% CI for the predicted mean given the new observation out of range
+# The Large Value 250,000 is out of range, we use prediction interval to account for uncertainty
+ci <- predict(model, data.frame(X=250000), interval = "prediction", level = 0.95)
+ci
+```
+<!-- End of solution -->
+
+#d-) What is the error variance of the  regression line?(5 points)
+
+**CONCLUSION**The residual variance of the model is 324539.4, see code below.
+<!-- Input solution below --> 
+```{r}
+variance<-(summary(model)$sigma)^2
+variance
+# OR
+Error_variance = sum(residuals(model)^2) / df.residual(model)
+```
+<!-- End of solution -->
+
+
+## Problem 2 
+
+Refer to the CDI data set. Use the number of active physicians as Y and total personal income as X. Select 1,000 random samples of 400 observations, fit the regression model and record $\beta_0$ and $\beta_1$ for each selected sample. Calculate the mean and variance of $\beta_0$ and $\beta_1$ based on the 1,000 different regression line and compare against the regression model in question 1 part b. (50 points)
+
+**CONCLUSION**see code below. We use the R-function sample() to generate random row indices (of size 400) and subset the original data frame (size is 440) without replacement. To compare against the original regression model we averaged the results. The parameter estimates are pretty close, however the simulated Standard Error of the intercept and slope were lower.
+<!-- Input solution below --> 
+```{r}
+set.seed(123)
+# Data frame with columns X and Y
+prg.hw2 <- function(df, n_sim, sample_size) {
+  # Initialize matrix for b0 and b1
+  out <- matrix(0, nrow = n_sim, ncol = 2)
+  colnames(out) <- c("beta0", "beta1")
+  
+  for (i in 1:n_sim) {
+    # 1. Randomly select row indices
+    indices <- sample(1:nrow(df), size = sample_size, replace = FALSE)
+    
+    # 2. Subset the data
+    sample_data <- df[indices, ]
+    
+    # 3. Fit regression model Y ~ X
+    f <- lm(Y ~ X, data = sample_data)
+    
+    # 4. Record coefficients
+    out[i, ] <- f$coefficients
+  }
+  return(out)
+}
+
+# Execute for 1,000 samples of 400 observations
+results <- prg.hw2(df = CDI_data, n_sim = 1000, sample_size = 400)
+### Calculate the mean and variance of $\beta_0$ and $\beta_1$ based on the 1,000 different regression line and compare against the regression model in question 1 part b.
+
+head(results)
+
+#print for comparison between simulated average values and 1b
+print(paste("Estimate b0: ",Estimate_b0))
+print(paste("Estimate b1: ",Estimate_b1))
+
+print(paste("Standard error b0: ",StandardErr_b0))
+print(paste("Standard error b1: ",StandardErr_b1))
+
+################################## To Compare
+
+average_parameter<-apply(results,2,mean)
+print(paste("Avg Estimate b0: ",average_parameter[1]))
+print(paste("Avg Estimate b1: ",average_parameter[2]))
+
+average_std<-sqrt(apply(results,2,var))
+print(paste("Avg StdardErr b0:",average_std[1]))
+print(paste("Avg StdardErr b1:",average_std[2]))
+
+################################## To Compare
+
+
+
+
+```
+
+
+
+```
+
+
+<!-- End of solution -->
+
+

@@ -1,0 +1,530 @@
+---
+title: 'CSCI E-106:Assignment 5 solutions'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+## Helper to display regression function with n coefficients
+dispRegFunc <- function(reg) {
+  coefs <- reg$coefficients
+  b0 = coefs[1]
+  n <- length(coefs)
+  my_formula <- paste0("Y = ", round(b0, digits = 6))
+  for (i in 2:n) {
+    my_formula <- paste0(my_formula, " + ", round(coefs[i],6), names(coefs)[i])
+  }
+  my_formula
+}
+
+options("scipen" = 12)  ##Used to avoid displaying numbers such as 1+e3 (exponent), changing the options
+# Function to load or download libraries
+loadLib = function(libName)
+{
+    if(require(libName, character.only=TRUE))
+    {
+        ##cat(libName, "loaded properly\n")
+    } else {
+        cat("Installing", libName, "\n")
+        install.packages(libName)
+        if(require(libName, character.only=TRUE))
+        {
+            cat(libName, "loaded properly\n")
+        } else {
+            stop(c(libName, "not properly installed\n"))
+        }
+    }
+}
+
+libs = c("rlang","ggplot2","faraway", "knitr", "MASS", "formatR", "glue", "olsrr","dplyr", "ALSM","reshape", "pander", "rmarkdown", "markdown", "tidyr", "GGally","ggpubr", "lmtest","caret","fastDummies","magick","tinytex")
+
+
+
+for (lib in libs)
+{
+    loadLib(lib)
+}
+
+```
+
+### Due Date: March 6, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+--------------------------------------------------------------------------------------
+## Problem 1 
+
+Refer to the CDI data set. The number of active physicians (Y) is to be regressed against total population , total personal income, land area and geographic region  ("Geographic region classification is that used by the U.S. Bureau of the Census, where: 1 = NE, 2 = NC, S = 3, W=4")
+
+Data Preparations
+```{r}
+PMQ1<- read.csv("../../Assignments/2/CDI Data.csv")
+# Development Data
+Y<-PMQ1$Number.of.active.physicians
+X1<-PMQ1$Total.population
+X2<-PMQ1$Total.personal.income
+X3<-PMQ1$Land.area
+X4<-PMQ1$Geographic.region
+
+data<-cbind(Y,X1,X2,X3,X4)
+data<-data.frame(data)
+
+```
+
+##a-) Create Dummy variables for Geographic Region. 
+
+**Conclusion** We selected to drop the level with less observations to create the dummies to model the regional categorical variable. See code below.
+
+<!-- Input solution below -->
+```{r}
+# Check X4 Levels, need 3 dummies, we decided to drop the level with less
+table(X4)
+data$X4.1=I(data$X4==1)*1
+data$X4.2=I(data$X4==2)*1
+data$X4.3=I(data$X4==3)*1
+# Drop un-necessary column
+data <- data %>% select(-c(X4))
+```
+<!-- End of solution -->
+
+
+##b-) Fit a regression model by using all variables above. Comment on your model.  
+**Conclusion** The model is  "Y = -61.57779 + 0.000798X1 + 0.096053X2 + -0.059023X3 + 39.738897X4.1 + 26.382054X4.2 + 74.101108X4.3", We conclude that potential problems with the regional dummies which are not significant. We keep them for specification, the adjusted R^2 is 90%
+<!-- Input solution below -->
+```{r, include=FALSE}
+model <- lm(Y ~ ., data = data)
+dispRegFunc(model)
+summary(model)
+```
+<!-- End of solution -->
+
+##c-) Test whether any geographic effects are present; use $\alpha$ = .10. State the alternatives, decision rule, and conclusion. What is the P-value of the test?
+**Conclusion** Geographic effects are not significative at 90% confidence level. We build a reduced model excluding the geographic effects and we apply the Generalized Linear test. The alpha=0.01 and the statistic the F_GLM, then null and alternative hypothesis as follows: Reject the null, geographic variables are not significant. Null and Alternative hypothesis Decision Rule: Reject H0 in favor of Ha if p-value < 0.01 for the F_GLM.
+<!-- Input solution below -->
+```{r, include=FALSE}
+model_reduced <- lm(Y ~ X1+X2+X3, data = data)
+a<-anova(model_reduced,model)
+a
+F_GLM<-anova(model_reduced,model)[2,5]
+F_GLM
+```
+<!-- End of solution -->
+
+##d-) Check the constant variance assumption for the errors.
+**Conclusion**One can check using plots and also a quantitative test like the Breush Pagan. When using the version of the Breush Pagan test used in the class materials it signal that heteroskedasticity is present (p-value 0.00 is lower than 0.05, thus, we reject the null hypothesis of homoscedasticity). Plots Residual vs. Fitted looks conclusive.
+
+<!-- Input solution below -->
+```{r}
+library(lmtest)
+par(mfrow=c(1,2))
+plot(model, which=1)
+## Confirm using bptest() R function:
+bptest(model, studentize = FALSE)# We have a relatively large number of observations n>100, so we selected FALSE option which assumes normality, in case you have smaller than that use TRUE here.
+```
+
+<!-- End of solution -->
+
+## e-)Check the normality assumption.
+**Conclusion**Residuals deviate from normality (according to the Normal Q-Q plot using confidence bands). Various residual normality tests confirm our observation. All quantitative tests, for example the Shapiro Wilks test have p-values < 0.05, so we reject the null hypothesis of normality of the residuals. 
+<!-- Input solution below -->
+```{r}
+library(olsrr)
+ols_test_normality(model)
+#  Load libraries again just in case
+library(tidyverse)
+library(tidyr)
+#  Step 1 Rank Order your estimated residuals
+ei<-model$residuals
+ei.rank <-  rank(ei)
+## Step 3- Create some auxiliary variables n and p
+n <- length(ei.rank)
+p <- length(model$coefficients)
+
+## Step 4 From 3.6 in ALSM page # 111
+zr <- (ei.rank-0.375)/(n+0.25)
+f.summary=summary(model)
+## Step 5 residual standard error from our summary above
+zr1 = f.summary$sigma*qnorm(zr)
+# Step 6 do a visual
+library(ggplot2)
+library(ggpubr)
+a4<-anova(model)
+mse<-a4$`Mean Sq`[4]
+par(mfrow=c(2,2))
+plot(zr1,ei,
+xlab="Expected Value under Normality",
+ylab="Residuals",
+main="Residuals vs Expected Value under Normality")
+#Residuals are normal but with one outlier point at the extreme, see below
+ggqqplot(ei, title = "QQ Plot of Residuals with Confidence Bands") +
+theme(plot.title = element_text(hjust = 0.5))
+```
+
+<!-- End of solution -->
+## f-)Check for large leverage points.
+**Conclusion**A simple way to check is to use a graph that way we have a visual that confirms multiple large leveraged points. Please refer to code below.
+
+<!-- Input solution below -->
+```{r}
+library(olsrr)
+
+ols_plot_resid_lev(model)
+# Calculate Cook's distance
+cooks_dist <- cooks.distance(model)
+
+# Identify observations identified in the OLS PLOT RESID LEV graph
+large_leverage_points <- which(cooks_dist > 3 / n)  # You can adjust the threshold (e.g., 3/n) to match the outlier and leverage diagnosis graph results
+
+# Print the indices of observations above the desired threshold on the Cook's distance
+print(large_leverage_points)
+```
+
+<!-- End of solution -->
+
+## g-)Check for outliers.
+
+**Conclusion** Many of the high Leverage points are also outliers. See code below.
+
+<!-- Input solution below -->
+```{r}
+plot(model,which=3)
+
+# Identify observations identified in the OLS PLOT RESID LEV graph as outliers
+outlier_points <- which(cooks_dist > 3 / n)  # You can adjust the threshold (e.g., 3/n) to match the outlier count in the leverage diagnosis graph
+
+# Print the indices of observations above the desired threshold on the Cook's distance
+print(outlier_points)
+
+```
+
+<!-- End of solution -->
+
+
+## h-)Check for influential points.
+
+**Conclusion**Several influential points according Cook's distance. To decide if it is influential enough, I apply the Bonferroni test. The points 11, 50, 53, 67 and 123 are bad outliers according to the rule. See code below.
+
+<!-- Input solution below -->
+```{r}
+# Use a visual
+
+library(car)
+influencePlot(model, id="noteworthy", main="Influence Plot",
+              sub="Circle size is proportional to Cook's distance")
+#Compute Bonferroni Critical Value is 4.199773
+Bonferroni_Critical_Value<-abs(qt(.05/(n*p),n-p-1))
+
+#are there of them bad outliers? 
+outlier_test <- outlierTest(model)
+
+knitr::kable(cbind(abs(outlier_test$rstudent),"<",Bonferroni_Critical_Value), align = "c",
+caption = "Largest Outlier vs. Bonferroni Critical Value")
+
+#Since Abs(-3.124428) is lower than 3.832128, we conclude that point West Virginia or Utah (2.52) are influential outliers, please note that Bonferroni applies an extra conservative approach.
+outlier_test
+```
+
+<!-- End of solution -->
+
+
+## Problem 2
+
+Using the prostate data under faraway library,if you are using the R Studio, please use the command below to download the data:
+```{r}
+library(faraway)
+data("prostate" ,package="faraway")
+```
+
+If you are using Posit R Cloud instead of RStudio Desktop, please use the command below to download the data:
+
+```{r}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/prostate.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(prostate)
+```
+Use lpsa as the response and d the other variables as predictors to answer the questions below. (30 points)
+
+##a-) Create train and test data sets. Use 70% of the data for train data set and use remaining data (30% of data) for test data set (use set.seed(1023)). Build a regression model to predict lpsa on the train data set. Write down the regression model and comment on the model performance. (5 points)
+
+**CONCLUSION** The regression model is "Y = 1.063527 + 0.699881lcavol + 0.395885lweight + -0.029109age + 0.111465lbph + 0.663679svi + -0.257964lcp + 0.064838gleason + 0.007046pgg45", the graphs show the residuals vs. fitted shows that the errors seem randomly distributed with constant variance with evidence of linearity as indicated by the red line. The normal QQ plot does not show evidence of fat tails although borderline. And a few outliers. However the overall fit indicate most of the predictors are not significant using alpha of 0.05 with an adjusted R2 of 59%. (we keep them for further analysis) See code below.
+
+<!-- Input solution below -->
+
+```{r}
+library(faraway)
+library(caret)
+# Split the data into training and testing samples
+set.seed(1023) 
+#Are we modeling a stationary variable (distributed with constant mean and variance) or a stochastic, response seem to include negative values (matters for Box Cox transformation) 
+ggdensity(prostate$lpsa,
+title = "Density Plot",
+xlab = "Y") +
+theme(plot.title = element_text(hjust = 0.5))
+#split the data into two parts 70-30 split
+DataSplit<-createDataPartition(y = prostate$lpsa, p = 0.69, list = FALSE)
+#creating the train and test data set
+prostate.train<-prostate[DataSplit,]
+prostate.test<-prostate[-DataSplit,]
+# always check if you have 70% 
+num_observations <- nrow(prostate)
+num_observations_train <- nrow(prostate.train)
+size_test <- (num_observations_train / num_observations)*100
+
+# we conclude 71% is sufficiently close to 70%, note the R-Developer may have considered other objectives for his createDataPartition like keep a balance sample in the sense of positive or negative.
+model <- lm(lpsa  ~ ., data = prostate.train)
+summary(model)
+dispRegFunc(model)
+
+plot(model, which=1)
+qqPlot(model, main = "QQ Plot")
+print(paste("Percentage in Train: ",size_test))
+dispRegFunc(model)
+```
+
+<!-- End of solution -->
+
+##b-) Visually by using the graphs, comments on regression model assumptions.
+**CONCLUSION** The regression model for analysis is "Y = 1.063527 + 0.699881lcavol + 0.395885lweight + -0.029109age + 0.111465lbph + 0.663679svi + -0.257964lcp + 0.064838gleason + 0.007046pgg45", below,graph shows residual distribution with no heavy tails. There is some outliers, but most of the assumption seem to be in line. See code below.
+
+Analysis
+***A1) Is normal linear regression model is appropriate for the problem?
+1.-Linearity of Regression Function: The Residual Vs. Fitted plot show a linear relationship, confirming the OLS is appropriate.
+2.-Error Variance seems constant. The pattern of the Residual vs. Fitted also seems to confirm that the variance is random.
+3.-Presence of outliers. The Residual vs. Leverage plot show there is at least one large no outliers.
+*A2) Are the estimated errors (residuals) are independent from the Xs and from the estimated values Y_hat??
+4.-Non-independence of Error Terms. Residual vs. Fitted and the Scale Location plots show strong no correlations among residuals. However, predictors are not significant with a relatively high R^2 that may point to collinearity or lack of indpendence of the predictors.
+5.-Omission of Important Predictor or explanatory variables. Residuals pattern seem to be random there is no systematic influence of the omitted variable here.
+*A3) Are the errors are iid~N(0,sigma)?? that is the errors are independent and identically normally distributed.
+6. Normality of the Residuals. The QQ plot shows some deviation from the diagonal at the middle, pointing to some non-normalities.
+<!-- Input solution below -->
+```{r, message=FALSE, warnings=FALSE}
+
+par(mfrow=c(2,2))
+plot(model)
+dispRegFunc(model)
+# Prepare a scatter plot of the data
+summary(model)
+```
+
+
+<!-- End of solution -->
+##c-) Test the model performance on the test data and comment of model stability nd performance. 
+**Conclusion: Model seem unstable with a 10% variation between train and test dataset. We confirm the fact that linear fit is overfit because the model performance is worst in the test data. Model may be improved by excluding not-significant variables.
+
+<!-- Input solution below -->
+
+```{r}
+library(caret)
+PredictedTrain<-predict(model,prostate.train)
+ModelTrain<-data.frame(obs = prostate.train$lpsa, pred=PredictedTrain)
+Model_Train=defaultSummary(ModelTrain)
+
+PredictedTest<-predict(model,prostate.test)
+ModelTest<-data.frame(obs = prostate.test$lpsa, pred=PredictedTest)
+Model_Test=defaultSummary(ModelTest)
+
+g = rbind(Model_Train,Model_Test)
+g
+```
+
+<!-- End of solution -->
+
+##d-) Perform Breusch-Pagan Test, write down null and alternative hypotheses and your conclusion.
+**CONCLUSION** We reject the null hypothesis of constant variance if the value of our test statistics is below a critical value, or equivalently if the p.value associated with our test statistics is well above alpha = .05. Here we can not reject the null hypothesis of constant variance.
+
+<!-- Input solution below -->
+
+```{r}
+#We reject the null hypothesis as p.value is 0.6812 > 0.05 - so, we conclude that the error variances are constant. We have a relatively mall number of observations n<100, so we don't assumes normality,no need to select option in the bptest as the default is TRUE.
+library(lmtest)
+bptest(model)
+
+```
+
+<!-- End of solution -->
+
+e-) Use the Box–Cox method to determine the best transformation on the response. if transformation is needed, perform the transformation and rebuild the model on the train data and check the model stability on the test data set. (10 points)
+**CONCLUSION** Box-Cox can not be used, lpsa is not a positive variable in all its range. We propose instead to drop non-significant variables to rebuild the model and test for stability. Seems overfit as the resulting model is better in sample. See code below.
+
+
+<!-- Input solution below -->
+
+```{r}
+# 1. Update to drop not significant variables
+model2<- lm(lpsa ~ ., data = prostate.train[,c(-3,-4,-5,-6,-7,-8)])
+summary(model2)
+# 2. Performance new model out of sample
+library(caret)
+PredictedTrain<-predict(model2,prostate.train)
+ModelTrain<-data.frame(obs = prostate.train$lpsa, pred=PredictedTrain)
+Model_Train=defaultSummary(ModelTrain)
+
+PredictedTest<-predict(model2,prostate.test)
+ModelTest<-data.frame(obs = prostate.test$lpsa, pred=PredictedTest)
+Model_Test=defaultSummary(ModelTest)
+
+g = rbind(Model_Train,Model_Test)
+g
+
+```
+
+<!-- End of solution -->
+
+
+
+## Problem 3
+
+Commercial properties data set. A commercial real estate company evaluates vacancy rates, square footage, rental rates, and operating expenses for commercial properties in a large metropolitan area in order to provide clients with quantitative information upon which to make rental decisions. The data are taken from 81 suburban commercial properties include the age (X1), operating expenses and taxes (X2), vacancy rates
+(X3), total square footage (X4), and rental rates (Y). (30 points) 
+### Data Preparations, upload data, libraries, install GGally and corrplot first then you commented out otherwise PDF is not going to work. 
+```{r, include=FALSE}
+d1<-read.csv("Commercial Properties Data Set.csv")
+#Scatter plot matrix
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+# Identify strongly correlated variables with wage
+#install.packages("corrplot")
+library(corrplot)
+```
+
+##a-) Fit regression model for four predictor variables to the data. State the estimated regression function.(5 points)
+
+**Conclusion** The fitted regression is "Y = 12.200586 - 0.142034X1 + 0.282017X2 + 0.619344X3 + 0.0000079243X4". And by looking at the summary of regression model we see that X1, X2, X4 have p value less than 0.05 and all three variables are significant, on other hand X3 is not significant. Model adjusted R-squared 56%. Model p value is p-value: 0, so model is also significant. 
+
+<!-- Input solution below -->
+```{r}
+options("scipen" = 12)  ##Used to avoid displaying numbers such as 1+e3 (exponent), changing the options
+f1<-lm(Y~X1+X2+X3+X4, data= d1)
+summary(f1)
+dispRegFunc(f1)
+```
+
+<!-- End of solution -->
+
+
+##b-) Visually using the appropriate graphs, comment on the regression model assumptions. (5 points)
+**CONCLUSION** The regression model is "Y = 12.200586 + -0.142034X1 + 0.282017X2 + 0.619344X3 + 0.000008X4",graph shows that the residual distribute approximately normal without heavy tails. The variance seems constant with constant mean and the overall fit linear. 
+
+Analysis
+***A1) Is normal linear regression model is appropriate for the problem?
+1.-Linearity of Regression Function: The Residual Vs. Fitted plot shows a linear relationship.
+2.-Constancy of the Error Variance. The pattern of the Residual vs. Fitted also seems to confirm that the variance is constant with homogeneous dispersion.
+3.-Presence of outliers. The Residual vs. Leverage plot show there is no outlier points.
+*A2) Are the estimated errors (residuals) are independent from the Xs and from the estimated values Y_hat??
+4.-Non-independence of Error Terms. Residual vs. Fitted and the Scale Location plots show random dispersion of residuals. Predictor variables seem independent.
+5.-Omission of Important Predictor or explanatory variables. Some graphs show to us that there is no omitted variable as disclosed by the residuals pattern, it is random there is no systematic influence of the omitted variable here.
+*A3) Are the errors are iid~N(0,sigma)?? Yes errors seem independent and identically normally distributed.
+6. Non-normality of the Residuals. The QQ plot with confidence bands does not shows large deviations from the diagonal at the extremes, pointed to normality.
+<!-- Input solution below -->
+```{r, message=FALSE, warnings=FALSE}
+library(car)
+qqPlot(f1, main = "QQ Plot")
+par(mfrow=c(2,2))
+plot(f1)
+
+```
+## c-) Divide the 81 cases into two groups. placing the 40 cases with the smallest fitted values into group 1 and the remaining cases into group 2. Conduct the Brown-Forsythe test.(5 points)
+
+**Conclusion** We test homogeneity of error variances using the Brown–Forsythe test (Levene’s test with the median) applied to the model residuals. Following the instructions, we split the data into two groups: the 40 observations with the smallest **fitted values** and the remaining observations. The null hypothesis is equal residual variances across these two groups. The test returns p > 0.05, so we fail to reject $H_0$; there is no evidence of heteroscedasticity in the residuals.
+
+<!-- Input solution below -->
+```{r}
+# ---- 1(e) Brown–Forsythe test exactly per spec ----
+library(car)
+
+# Residuals and fitted from the Problem 1 model
+r     <- residuals(f1)
+fhat  <- fitted(f1)
+
+# Group by the 40 smallest fitted values (group A) vs the rest (group B)
+ord <- order(fhat)
+grp <- rep("B_rest", length(fhat))
+grp[ord[1:40]] <- "A_small40"
+grp <- factor(grp, levels = c("A_small40", "B_rest"))
+
+# Brown–Forsythe test (Levene with center = "median") on residuals by group
+bf <- leveneTest(r ~ grp, center = "median")
+print(bf)
+```
+
+<!-- End of solution -->
+<!-------------------------------------->
+
+
+##d-) Fit a second order model ($Y = b_0 + b_1 X_1 +b_2 X_2 + b_3 X_3+b_4X_4+b_5X_{1}^{2}+b_6X_{2}^{2}+b_7X_{3}^{2}+b_8X_{4}^{2}+b_9X_{1}X_{2}+ b_{10}X_{1}X_{3}+b_{11}X_{1}X_{4}+b_{12}X_{2}X_{3}+b_{13}X_{2}X_{4}+b_{14}X_{3}X_{4}+b_{15}X_{1}X_{2}X_{3}+b_{16}X_{1}X_{2}X_{4}+b_{17}X_{2}X_{3}X_{4}+b_{18}X_{1}X_{2}X_{3}X_{4}+b_{19}X_{1}X_{3}X_{4}$) Drop the insignificant variables from the model one at a time, refit the model and repeat this until all the variables you have in the model are significant. Compare this again the model in part b) (15 points)
+**Conclusion** See code below. The full model is Y = 14.769155 - 0.21454x1g + 0.222764x2g - 6.30191x3g + 0.00000409571x4g + 0.00250229I(x1g^2) - 0.0327956I(x2g^2) - 9.83949I(x3g^2) - 0.0000000000066436I(x4g^2) + 0.0254521x1g:x2g - 0.677002x1g:x3g - 0.000000458195x1g:x4g - 1.03039x2g:x3g + 0.00000159848x2g:x4g - 0.000019107x3g:x4g - 0.0590515x1g:x2g:x3g + 0.000000623596x1g:x2g:x4g + 0.0000077624x2g:x3g:x4g + 0.0000010229x1g:x3g:x4g + 0.00000488099x1g:x2g:x3g:x4g. Adjusted R-squared is approximately 0.68; not all variables are significant at alpha = 0.05. We apply backward elimination by p-value to remove non-significant terms and then confirm with a general linear test (reduced FIRST, full SECOND). Since the GLT p-value is 0.645 > 0.05, the reduced model is acceptable and the dropped terms can be omitted.
+
+<!-- Input solution below -->
+```{r}
+# Centering the variables
+x1g <- d1$X1 - mean(d1$X1)
+x2g <- d1$X2 - mean(d1$X2)
+x3g <- d1$X3 - mean(d1$X3)
+x4g <- d1$X4 - mean(d1$X4)
+
+# Full 2nd-order model (centered)
+model1 <- lm(
+  Y ~ x1g + x2g + x3g + x4g +
+      I(x1g^2) + I(x2g^2) + I(x3g^2) + I(x4g^2) +
+      x1g:x2g + x1g:x3g + x1g:x4g + x2g:x3g + x2g:x4g + x3g:x4g +
+      x1g:x2g:x3g + x1g:x2g:x4g + x2g:x3g:x4g + x1g:x3g:x4g +
+      x1g:x2g:x3g:x4g,
+  data = d1
+)
+
+summary(model1)
+dispRegFunc(model1)
+```
+Model Selection by Stepwise Elimination, removing the largest p-value terms iteratively until all remaining terms are significant at 5%.
+
+```{r, include=FALSE}
+f1 <- update(model1, . ~ . - x1g:x2g:x3g)   # drop highest p
+summary(f1)
+f1 <- update(f1,    . ~ . - I(x1g^2))
+summary(f1)
+f1 <- update(f1,    . ~ . - I(x4g^2))
+summary(f1)
+f1 <- update(f1,    . ~ . - x2g:x3g:x4g)
+summary(f1)
+f1 <- update(f1,    . ~ . - x1g:x3g:x4g)
+summary(f1)
+f1 <- update(f1,    . ~ . - x2g:x3g)
+summary(f1)
+f1 <- update(f1,    . ~ . - I(x3g^2))
+summary(f1)
+f1 <- update(f1,    . ~ . - x3g:x4g)
+summary(f1)
+f1 <- update(f1,    . ~ . - x2g:x4g)
+summary(f1)
+f1 <- update(f1,    . ~ . - I(x2g^2))
+summary(f1)
+```
+
+Here we want only significant variables at 5%
+
+```{r}
+# Final removal to ensure all remaining terms are significant at 5%
+model2 <- lm(Y ~ x1g + x2g + x3g + x4g +
+               x1g:x2g + x1g:x4g + x1g:x2g:x4g + x1g:x2g:x3g:x4g,
+             data = d1)
+summary(model2)
+dispRegFunc(model2)
+
+# General Linear Test: reduced FIRST, full SECOND
+anova(model2, model1)
+```
+<!-- End of solution -->
+
+<!-------------------------------------->

@@ -1,0 +1,50 @@
+#Power Cell Example
+Power.Cell <- read.csv("/cloud/project/Data/Power Cell.csv")
+head(Power.Cell)
+#remove any variables matching Power Cell variables before attaching the variables
+rm(X1, X2, Y)
+attach(Power.Cell)
+
+#Without centering the variables
+f2<-lm(Y~X1+I(X1^2)+X2+I(X2^2),data=Power.Cell)
+summary(f2)
+library(faraway)
+vif(f2)
+
+#using the build in functions
+#raw=TRUE, centerting th variables as bove
+#raw=False. This is based on orthogonal polynomials:
+#Z_{1}= a_{1} + b_{1}X 
+#Z_{2}= a_{2} + b_{2}X + c_{2}X^{2}
+#Z_{3}= a_{3} + b_{3}X + c_{3}X^{2}+ d_{3}X^{3}
+#raw=FALSE, will give you different answers
+#it will give you the same response
+Polyfit2a <- lm(Y ~ poly(X1, 2, raw=TRUE)+poly(X2, 2, raw=TRUE))
+summary(Polyfit2a)
+
+rbind(Polyfit2a$coefficients,f2$coefficients)
+
+#Centering the variables
+x1<-(X1-mean(X1)) 
+x2<-(X2-mean(X2)) 
+x1sqr<-x1^2
+x2sqr<-x2^2  
+x1x2<-x1*x2
+f<-lm(Y~ x1+ x2+ x1sqr+ x2sqr)
+summary(f)
+vif(f)
+
+#with interaction term
+f1<-lm(Y~ x1+ x2+ x1sqr+ x2sqr+x1x2)
+summary(f1)
+vif(f1)
+
+#can we drop the quadratic and interaction terms
+#Ho: B3=B4=B5=0
+#Ha: not equal to zero
+f2<-lm(Y~ x1+ x2)
+summary(f2)
+anova(f2,f1)
+
+#Ho:Terms can be dropped vs. Ha: Terms cannot be dropped
+#pvalue is 0.55, terms can be dropped from the model

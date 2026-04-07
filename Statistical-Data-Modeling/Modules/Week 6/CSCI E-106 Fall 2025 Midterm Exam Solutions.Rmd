@@ -1,0 +1,341 @@
+---
+title: "CSCI E-106 : Fall 2025 Midterm Exam"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(pander)
+library(rmarkdown)
+library(markdown)
+library(MASS)
+library(faraway)
+library(glmnet)
+library(lmtest)
+library(olsrr)
+library(leaps)
+library(caret)
+library('fastDummies')
+library(glmnet)
+options("scipen" = 10)
+```
+### Instructions
+
+1-) As always, you are required to follow Harvard University academic integrity and honor code.
+
+2-) Open book and open notes exam ( textbooks (print or pdf), lecture slides, notes, practice exam, homework solutions, and TA slides, including all Rmd's*).
+
+3-) You are allowed to use RStudio Desktop or RStudio Cloud (https://rstudio.cloud.) , Microsoft Word, Power Point and PDF reader, and canvas on your laptop.
+
+4-) Proctorio is required to start this exam. If you are prompted for an access code, you must Install and Configure Proctorio on your machine.  
+
+5-) Review the Proctorio Support for Test Takers page, Online Exam Checklist and Proctorio Checklist to help you avoid common errors and who to contact if you run into any issues. 
+
+6-) Practice Setup Quiz is available under Quizzes to test your connection and to find out if you are ok with the Proctorio.
+
+7-) Please read the list of recording and restrictions provided by Proctorio carefully before taking the exam.
+
+8-) The midterm exam will be available from Friday, October 31st at 12 pm EST through Wednesday November 5th at 12:00 pm EST. You must submit your midterm by Wednesday November 5th at 12:00 pm EST. 
+
+9-) Once you start the exam, Once you start the exam, you must complete the exam in 3 hours or by Wednesday November 5th at 12:00 pm EST.
+
+10-) In order to receive full credit, please provide full explanations and calculations for each questions.
+
+11-) Make sure that you are familiar with the procedures for troubleshooting exam issues. Preview the document Download the document and follow the protocol if there are any issues!
+
+12-) Make sure you submit both .Rmd and (knitted) pdf or html files.
+
+13-) You need to have a camera on your laptop.
+
+14-) Please reach out to DCE Online Support by using the information below\newline
+DCE Online Support\newline
+(617) 998-8571\newline
+(Mon-Thurs 10am-11pm, Fri-Sun 10am-8pm EST)\newline
+AcademicTechnology@dce.harvard.edu
+
+15-) Our emails:\newline
+hakangogtas@yahoo.com\newline
+rafael_gomeztagle@g.harvard.edu\newline
+andreahatch10@gmail.com\newline
+sezer@yahoo.com\newline
+iankelk@gmail.com\newline
+\newpage
+
+## Problem 1
+
+Refer to the Hitters data set. Major League Baseball Data from the 1986 and 1987 seasons. The data set can be downloaded from the attached CSV file or directly from ISL2 library in R by copying and pasting the following command into R console:library(ISLR2);data("Hitters").  (100 Points)
+
+Description of the data is below and there  are 322 observations and 20 variables, including 3 categorical variables (League, Division and NewLeague).
+
+AtBat=Number of times at bat in 1986\newline
+
+Hits=Number of hits in 1986\newline
+
+HmRun=Number of home runs in 1986\newline
+
+Runs=Number of runs in 1986\newline
+
+RBI=Number of runs batted in in 1986\newline
+
+Walks=Number of walks in 1986\newline
+
+Years=Number of years in the major leagues\newline
+
+CAtBat=Number of times at bat during his career\newline
+
+CHits=Number of hits during his career\newline
+
+CHmRun=Number of home runs during his career\newline
+
+CRuns=Number of runs during his career\newline
+
+CRBI=Number of runs batted in during his career\newline
+
+CWalks=Number of walks during his career\newline
+
+League=A factor with levels A and N indicating player's league at the end of 1986\newline
+
+Division=A factor with levels E and W indicating player's division at the end of 1986\newline
+
+PutOuts=Number of put outs in 1986\newline
+
+Assists=Number of assists in 1986\newline
+
+Errors=Number of errors in 1986\newline
+
+Salary=1987 annual salary on opening day in thousands of dollars\newline
+
+NewLeague=A factor with levels A and N indicating player's league at the beginning of 1987\newline 
+
+
+a- ) Remove the missing data by using na.omit comment (e.g. Hitters<-na.omit(Hitters)). Create dummy variables for the categorical variables League, Division and NewLeague. Drop the categorical variables after creating the dummy variables from the data set. Perform initial data analyses to identify outliers, and variables that show high correlation with the salary and with each other. Document your findings (15 points)
+
+
+CAtBat,CHits,CHmRun  and CRBI are moderately correlated with Salary with the highest correlation coefficients between 0.52 to 0.57. Missing data was excluded. Boxplots for Salary indicate that there are outliers and the distribution of salary is right skewed. Some of the independent variables are highly correlated with each other. 
+
+```{r}
+library(ISLR2);data("Hitters")
+
+#adding the dummy variables
+Hitters$League_1<- I(Hitters$League=="A")*1
+Hitters$Division_1<- I(Hitters$Division=="E")*1
+Hitters$NewLeague_1<- I(Hitters$NewLeague=="A")*1
+
+#dropping the categorical variables
+Hitters1<-na.omit(Hitters[,-c(14,15,20)])
+round(cor(Hitters1),2)
+boxplot(Hitters1$Salary)
+```
+
+b- ) Create train and test data sets: select a random sample of 70% observations from the data set for the train data set and remaining  cases for the test data set. (use set.seed(1299) before selecting the sample) (5 points)
+**Conclusion** We manually check the percentage in the console and we confirmed, see code below.
+
+```{r}
+set.seed(1299)
+
+n1=nrow(Hitters1)
+q1_sample <- sample(n1, 0.7*n1)
+
+q1_train_data <- Hitters1[q1_sample, ]
+q1_test_data  <- Hitters1[-q1_sample, ]
+```
+
+*** Use train data set to answer questions part c to below
+
+c- ) Build a regression model to predict salary by using all the variables. Check all regression model assumptions visually with appropriate graphs and conduct the Breusch-Pagan Test to determine whether or not the error variances are constant. Please discuss your findings (10 points). Evaluate the model performance on the training data set.
+
+There is a serious multi-collinearity issue in the data set. VIF is greater than 10 for majority variables with the highest VIF of 720 for CAtBat. Therefore, P values from the summary function are not reliable. By using the anova table, the following variables are significant AtBat,Hits,HmRun,RBI,Walks,Years,CatBat,CHits,PutOuts, and Division_1.$R^2$ is %52 and QQ plot indicates  potential outliers and log tails, indicating that log transformation might be needed. The graphs also indicate that unequal variances. 
+
+Breusch-Pagan Test:
+
+Ho: Error variances are constant\newline
+Ha: Error variances are not constant\newline
+
+P value for the Breusch-Pagan Test is < 0.05, Reject Ho. Variances are NOT equal.
+
+
+```{r}
+
+f1<-lm(Salary~.,data=q1_train_data)
+summary(f1)
+vif(f1)
+anova(f1)
+
+par(mfrow=c(2,2))
+plot(f1)
+
+ols_test_breusch_pagan(f1)
+vif(f1)
+#performance on train
+
+PredictedTest<-predict(f1,q1_train_data)
+ModelTest1<-data.frame(obs = q1_train_data$Salary, pred=PredictedTest)
+reg.full.train<-defaultSummary(ModelTest1)
+reg.full.train
+
+```
+
+
+d- ) Use stepwise (both ways) model selection to select the best model for predicting the Salary on the train data set. **Ensure that all variables are significant, use ** $\alpha=0.05$. Justify your choice of model. Check all regression model assumptions visually with appropriate graphs and conduct the Breusch-Pagan Test to determine whether or not the error variances are constant. Evaluate the performance of Regression model on the train data sets. Please discuss your findings (15 points)
+
+
+CRuns, Walks, Division_1, PutOuts, and CWalks  are significant. $R^2$ is %46 and QQ plot indicates  potential outliers and log tails, indicating that log transformation might be needed. The graphs also indicate that unequal variances. 
+
+Breusch-Pagan Test:
+
+Ho: Error variances are constant\newline
+Ha: Error variances are not constant\newline
+
+P value for the Breusch-Pagan Test is < 0.05, Reject Ho. Variances are NOT equal.
+
+VIFs are less than 10, there is no multicollinearity in the data set.
+
+
+```{r}
+
+k1<-ols_step_both_p(f1, p_remove =0.05,details=FALSE)
+k1$model
+
+f2<-lm(Salary~ CRuns+Walks+Division_1+PutOuts+CWalks,data=q1_train_data)
+summary(f2)
+par(mfrow=c(2,2))
+plot(f2)
+
+ols_test_breusch_pagan(f2)
+vif(f2)
+#performance on train data set
+
+PredictedTest<-predict(f2,q1_train_data)
+ModelTrain<-data.frame(obs = q1_train_data$Salary, pred=PredictedTest)
+reg.train<-defaultSummary(ModelTrain)
+reg.train
+```
+
+
+e- ) Build a lasso regression model to predict Salary by using all variables and compare the model performance against the your model on part d.(15 points)
+
+Lasso performs variable selection and the following variables are kept in the model;  Hits,RBI , Walks, CRuns,CRBI,PutOuts, Errors,League_1, and Division_1.  $R^2$ is %47.     
+
+```{r}
+
+x <- model.matrix(Salary~.,q1_train_data)[,-c(1)]
+#our dependent variable
+y <- q1_train_data$Salary
+LassoMod <- glmnet(x, y, alpha=1, nlambda=100,lambda.min.ratio=0.0001)
+CvLassoMod <- cv.glmnet(x, y, alpha=1, nlambda=100,lambda.min.ratio=0.0001)
+best.lambda.lasso <- CvLassoMod$lambda.min
+best.lambda.lasso
+coef(CvLassoMod, s = "lambda.min")
+
+## Lasso Regression Model
+y_hat.lasso <- predict(LassoMod, s = best.lambda.lasso, newx = x)
+Predicted<-c(y_hat.lasso)
+ModelTrain.lasso<-data.frame(obs = q1_train_data$Salary, pred=Predicted)
+lasso.train<-defaultSummary(ModelTrain.lasso)
+lasso.train
+```
+
+g- ) Use a robust regression model by using the same model part d and comment on your findings. (10 points)
+
+The regression coefficient for Division_1 is significantly different between Robust regression and OLS regression. Coefficent signs are the same and $R^2$ of Robust regression 46%, very similar to the regresssion model.
+
+```{r}
+rr.huber <- rlm(Salary~ CRuns+Walks+Division_1+PutOuts+CWalks, data = q1_train_data)
+cbind(f2$coefficients,rr.huber$coefficients)
+#performance on train data set
+
+PredictedTest<-predict(rr.huber,data=q1_train_data)
+ModelTrain.R<-data.frame(obs = q1_train_data$Salary, pred=PredictedTest)
+huber.train.R<-defaultSummary(ModelTrain.R)
+huber.train.R
+```
+
+
+*** Use test data set to answer question below
+
+h- ) Compare the performance of models built in part e, f, and g. Which model would you choose and why? (20 points)
+
+Regression model performs outperform other model.
+
+```{r}
+#OLS Reg model
+PredictedTest<-predict(f2,q1_test_data)
+ModelTest1<-data.frame(obs = q1_test_data$Salary, pred=PredictedTest)
+reg.test<-defaultSummary(ModelTest1)
+
+#Lasso model
+x.t <- model.matrix(Salary~.,q1_test_data)[,-c(1)]
+y_hat.lasso <- predict(LassoMod, s = best.lambda.lasso, newx = x.t)
+Predicted<-c(y_hat.lasso)
+ModelTest.lasso<-data.frame(obs = q1_test_data$Salary, pred=Predicted)
+lasso.test<-defaultSummary(ModelTest.lasso)
+
+#Robust Regression
+
+PredictedTest<-predict(rr.huber,newdata=q1_test_data)
+ModelTest<-data.frame(obs = q1_test_data$Salary, pred=PredictedTest)
+huber.test<-defaultSummary(ModelTest)
+
+
+data.frame(rbind(reg.test,lasso.test,huber.test))
+```
+
+
+## Problem 2
+
+Use the train and test data you developed on the first question. Answer the following questions.
+
+a-) Perform Box-Cox transformation to decide if Salary variable should be transformed on the train data set. If indicated, transform the Salary variable and refit your regression model on the train data set. Check all regression model assumptions visually with appropriate graphs and conduct the Breusch-Pagan Test to determine whether or not the error variances are constant.  (10 points)
+
+$\lambda$ is 0.1 and 95% confidence interval covers 0. For the ease of the computation and interpration, we will use log transformation.
+
+Due to a serious multi-collinearity issue in the data set,  P values from the summary function are not reliable. By using the anova table, the following variables are significant AtBat,Hits,HmRun,RBI,Walks,Years,CatBat,and Errors. $R^2$ is %55 and QQ plot indicates  potential outliers. The graphs also does not indicate unequal variances. 
+
+Breusch-Pagan Test:
+
+Ho: Error variances are constant\newline
+Ha: Error variances are not constant\newline
+
+P value for the Breusch-Pagan Test is > 0.17, Accept Ho. Variances are  equal.
+
+
+```{r}
+par(mfrow=c(1,1))
+boxcox(f1,lambda=seq(-2,2,by=.1))
+#actual value lambda
+a=boxcox(f1,lambda=seq(-2,2,by=.1))
+lamda=a$x[which.max(a$y)]
+lamda
+
+f3<-lm(log(Salary)~ .,data=q1_train_data)
+summary(f3)
+anova(f3)
+par(mfrow=c(2,2))
+plot(f3)
+ols_test_breusch_pagan(f3)
+vif(f3)
+```
+
+
+b-) Evaluate the model you built on the transformed Salary performance on the test data set. Comment on your findings. (5 points)
+
+Regression model performance is similar on both test and train data set.
+
+```{r}
+#Train Data
+PredictedTrain<-exp(predict(f3,q1_train_data))
+ModelTrain<-data.frame(obs = q1_train_data$Salary, pred=PredictedTrain)
+reg.train<-defaultSummary(ModelTrain)
+
+#Test Data
+PredictedTest<-exp(predict(f3,newdata=q1_test_data))
+ModelTest<-data.frame(obs = q1_test_data$Salary, pred=PredictedTest)
+reg.test<-defaultSummary(ModelTest)
+data.frame(rbind(reg.train,reg.test))
+```
+

@@ -1,0 +1,215 @@
+---
+title: 'CSCI E-106: TA Section'
+output:
+  pdf_document:
+    fig_caption: yes
+    toc: yes
+  html_document:
+    df_print: paged
+    toc: yes
+date: "March 3 2026"
+---
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE, 
+                      fig.width=10, fig.height=5)
+
+# Function to load or download libraries
+loadLib = function(libName)
+{
+    if(require(libName, character.only=TRUE))
+    {
+        cat(libName, "loaded properly\n")
+    } else {
+        cat("Installing", libName, "\n")
+        install.packages(libName)
+        if(require(libName, character.only=TRUE))
+        {
+            cat(libName, "loaded properly\n")
+        } else {
+            stop(c(libName, "not properly installed\n"))
+        }
+    }
+}
+
+libs = c("ggplot2", "knitr", "MASS", "formatR")
+
+for (lib in libs)
+{
+    loadLib(lib)
+}
+```
+
+## (Textbook 3.3) Refer to Grade point average Problem 1.19. 
+
+**Please use dataset titled: **CH01PR19.txt** 
+
+a. Load your data & create regression model
+
+```{r problem 3.3a}
+Dataset_1_19 = read.table("CH01PR19.txt", 
+                          header=FALSE, sep="", 
+                          col.names=c("V1","V2"))
+
+lmfit19 =lm(V1 ~ V2, data = Dataset_1_19)
+
+
+summary(lmfit19)
+
+#save our residuals
+ei = lmfit19$residuals
+
+#rank our residuals from small to large
+ri = rank(ei)
+
+```
+
+e. Conduct the Brown-Forsythe test to determine whether or not the error variance varies with
+the level of X. Divide the data into the two groups, X < 26, X >= 26, and use a = .01. State
+the decision rule and conclusion. Does your conclusion support your preliminary findings
+in part (c)? 
+```{r problem 3.3e}
+
+summary(lmfit19)
+
+#Remember what brown-forsythe is for - checking error variance is equal across all 
+
+#---this is the long hand way---
+
+#break into two groups 
+df = data.frame(cbind(Dataset_1_19[,1],Dataset_1_19[,2],ei))
+df1 = df[df[,2]<26,]
+df2 = df[df[,2]>=26,]
+
+summary(df1[,3])
+
+summary(df2[,3])
+
+
+#n1
+n1 = length(df1[,3])
+print(n1)
+
+#n2
+n2 = length(df2[,3])
+print(n2)
+
+#this is the long hand for taking our absolute values of
+#the residuals - the median of the selected group
+#find the median from above
+d1 = abs(df1[,3]+0.032900)
+d2 = abs(df2[,3]-0.142618)
+
+#calculate means for our answer 
+mean(d1)
+mean(d2)
+
+s2 = (var(d1)*(65-1)+var(d2)*(55-1))/(120-2)
+print(s2)
+
+#calculate s
+s = sqrt(s2)
+print(s)
+
+#manually creating t statistic 
+#testStastic = (mean.d1 - mean.d2) / (s * sqrt((1/n1)+1/n2)
+testStastic = (.43796-.50652)/(.417275*sqrt((1/65)+(1/55)))  
+print(testStastic)
+
+t = qt(.995, 118) 
+print(t)
+```
+Part E Notes: We need to put our answer together 
+
+n1 = 65, mean.d1 = .43796
+n2 = 55, mean.d2 =.50652 
+s = .417275
+test Statistic = (.43796 - .50652)/ .417275 q(1/65)+(1/55)  = -.8968005
+t =(.995,118) = 2.61814
+
+Part E Conclusion:  If abs(testStatistic) <= 2.61814 conclude error variance constant, otherwise  error variance not constant. Thus, we conclude error variance constant.
+
+```{r shorter version}
+
+#---this is a shorter way---
+#break into groups:
+group <- ifelse(Dataset_1_19$V2 < 26, "X<26", "X>=26")
+
+# group medians
+med1 <- median(ei[group=="X<26"])
+med2 <- median(ei[group=="X>=26"])
+
+# absolute deviations
+z <- ifelse(group=="X<26",
+            abs(ei - med1),
+            abs(ei - med2))
+
+# one-way ANOVA of our Brown-Forsythe test)
+bf <- aov(z ~ group)
+summary(bf)
+```
+decision rule: if p <= .01, reject H0 (variances are different), 
+if p > .01 fail to reject H0 (no variance differing)
+
+so we fail to reject since our p value is: 0.372 
+
+
+
+## (Textbook 3.32) 
+Refer to the Prostate cancer data set in Appendix C.5. Build a regression model to predict PSA level (Y) as a function of cancer, Volume (X). The analysis should include an assessment of the degree to which the key regression assumptions are satisfied. If the regression assumptions are not met, include and justify appropriate remedial measures. Use the final model to estimate mean PSA level for a patient whose cancer volume is 20 cc. Assess the strengths and weaknesses of the final model. 
+
+*Please use dataset titled: **APPENC05.txt***
+```{r problem 3.32}
+
+df_prostate = read.table("APPENC05.txt", header=FALSE, sep="", col.names=c("id", "psa", "cancerVol", "weight", "age", "benPros", "seminalVes", "capPen","gleasonScore"))
+
+
+f_3.32 = lm(df_prostate$psa ~ df_prostate$cancerVol)
+summary(f_3.32)
+
+
+e1 = f_3.32$residuals
+
+#standardize residuals needed for QQ plot##
+rs1 = rstandard(f_3.32)
+
+par(mfrow=c(1,3))
+
+plot(df_prostate$cancerVol, df_prostate$psa, xlab="Cancer Volume", ylab="PSA")
+abline(f_3.32)
+
+plot(df_prostate$cancerVol,e1, xlab="Cancer Valume", ylab="Residuals")
+abline(f_3.32)
+
+## QQ plot ##
+qqnorm(rs1)
+
+par(mfrow=c(1,1))
+
+boxcox(f_3.32,lambda=seq(-5,5,by=.1))
+
+#From our boxcox we see that we need to use the log transformation
+
+f_3.32_2 = lm(log(df_prostate$psa)~ df_prostate$cancerVol)
+summary(f_3.32_2)
+
+e1 = f_3.32_2$residuals
+
+#standardize residuals needed for QQ plot##
+rs1 = rstandard(f_3.32_2)
+
+par(mfrow=c(1,3))
+
+plot(df_prostate$cancerVol, log(df_prostate$psa), xlab="Cancer Volume", ylab="PSA")
+
+abline(f_3.32_2)
+
+plot(df_prostate$cancerVol,e1, xlab="Cancer Volume")
+
+abline(f_3.32_2)
+
+qqnorm(rs1)
+
+```
+
+Problem 3.32: It still seems like we were getting a lot of outliers in our 2 graphs. Our normal plot is in line but not still not completely a great line. 

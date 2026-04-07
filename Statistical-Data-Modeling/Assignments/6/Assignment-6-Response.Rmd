@@ -1,0 +1,247 @@
+---
+title: 'CSCI E-106:Assignment 6'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressPackageStartupMessages(library(lmtest))
+suppressPackageStartupMessages(library(faraway))
+library(MASS)
+library(car)
+library(caret)
+library('olsrr')
+set.seed(1023) 
+```
+
+## Problem 1
+
+```{r}
+library(faraway)
+data(divusa,package="faraway")
+str(divusa)
+```
+
+\textbf{a-) Fit a regression model with divorce as the response and unemployed, 
+femlab, marriage, birth and military as predictors.}
+
+```{R}
+d_data = divusa[
+  ,c("divorce", "unemployed", "femlab", "marriage", "birth", "military")
+]
+d_model = lm(divorce ~ ., d_data)
+summary(d_model)
+```
+\textbf{b-) For the same model, compute the VIFs. Is there evidence that 
+collinearity causes some predictors not to be significant? Explain.}
+
+
+```{R}
+vif(d_model)
+print("R_i^2")
+print(1 - 1/vif(d_model))
+```
+
+Typically, VIF between 1 and 5 indicates moderate correlation. The highest VIF
+is for `femlab`.
+
+```{R}
+d_femlab_model = lm(femlab ~ . -divorce, d_data)
+summary(d_femlab_model)
+plot(d_data$femlab, d_data$unemployed)
+```
+
+
+\textbf{c-) Does the removal of insignificant predictors from the model reduce 
+the collinearity? Investigate.}
+
+
+```{R}
+rms = function(xs) { sqrt(mean(xs^2)) }
+cat(sprintf("Baseline: %f\n", rms(vif(d_model))))
+for (factor in c("femlab", "unemployed", "marriage", "birth", "military")) {
+  expr = sprintf("divorce ~ . - %s", factor)
+  cat(sprintf("%s: %f\n", expr, rms(vif(lm(as.formula(expr), d_data)))))
+}
+
+```
+The RMS of the VIF factors decrease when we remove any of `femlab`, 
+`unemployed`, `marriage`, or `birth`.
+
+
+\textbf{d-) Visually using the appropriate graphs, comment on the regression 
+model assumptions.}
+
+
+```{R}
+cor(d_data)
+pairs(d_data[,-1])
+plot(d_model$residuals[order(d_data$divorce)])
+```
+
+There are significant non-linear effects between almost all of the factors.
+
+There appears to be a non-linear pattern in the residuals. There appears to be
+non-uniform variance in the residuals.
+
+## Problem 2
+
+\textbf{Refer to the Machine speed Data, showing the number of defective items 
+produced by a machine (Y) and the speed setting of the machine (X). Answer the 
+questions below.}
+
+```{R}
+m_data = read.csv("Machine Speed.csv")
+m_data = m_data[order(m_data$X), ]
+tail(m_data)
+```
+
+
+\textbf{a-) Fit a linear regression function by ordinary least squares, obtain 
+the residuals, and plot the residuals against X. Plot the squared residuals 
+against X.}
+
+```{R}
+m_lm = lm(Y ~ X, m_data)
+summary(m_lm)
+```
+
+```{R}
+plot(m_lm$residuals)
+plot(m_lm$residuals^2)
+```
+
+\textbf{What do the plots suggest?}
+
+The variance appears to increase with $X$.
+
+b-) Conduct the Breusch-Pagan test for constancy of the error variance,  use 
+$\alpha$ = .10. State the alternatives, decision rule, and conclusion.
+
+Null Hypothesis: The error variance is homoscedastic.
+
+Alternative Hypothesis: The error variance is heteroscedastic.
+
+```{R}
+bptest(m_lm)
+```
+
+At $\alpha = 0.10$, we have $0.07 < 0.10$, so we cannot discharge the null
+hypothesis.
+
+\textbf{c-)  Calculate the weights for weighted least square estimation and 
+refit the model.}
+
+```{R}
+residuals_x = data.frame(residuals = abs(m_lm$residuals), X= m_data$X)
+var_est = predict(lm(residuals ~ X, residuals_x), new_data = m_data$X)
+weights = 1 / var_est
+m_lm_weighted = lm(Y~X, m_data, weights=weights)
+summary(m_lm_weighted)
+```
+
+\textbf{d-)  Are the weighted least squares estimates of $\beta_0$ and $\beta_1$ 
+similar to the ones obtained with ordinary least squares in part (a)?}
+
+```{R}
+print(m_lm$coefficients)
+print(m_lm_weighted$coefficients)
+```
+
+The weights are similar in order and direction. They differ slightly.
+
+\textbf{e-) Compare the estimated standard deviations of the weighted least 
+squares estimates b$\beta_{w0}$ and $\beta_{w1}$in part (c) with those for the 
+ordinary least squares estimates in part (a). What do you find?}
+
+```{R}
+print(summary(m_lm)$coefficients[, "Std. Error"])
+print(summary(m_lm_weighted)$coefficients[, "Std. Error"])
+```
+
+The standard errors for the weighted model are slightly lower.
+
+\textbf{f-) Iterate the steps in parts (c) one more time. Is there a substantial 
+change in the estimated regression coefficients? If so, what should you do?}
+
+```{R}
+residuals_x = data.frame(residuals = abs(m_lm_weighted$residuals), X= m_data$X)
+var_est = predict(lm(residuals ~ X, residuals_x), new_data = m_data$X)
+weights = 1 / var_est
+m_lm_weighted2 = lm(Y~X, m_data, weights=weights)
+summary(m_lm_weighted2)
+```
+
+The estimates, Multiple R-squared, and Std. Error do not change significantly.
+
+If there was a marginal improvement over the last iteration, you would probably
+want to continue iterating until the improvement becomes insignificant.
+
+## Problem 3
+
+\textbf{Refer to the CDI data set used in Assignment 5. For this analysis, use 
+all variables except Identification Number, County, and State. In addition, 
+include  the dummy variables you created for Geographic Region in Question 1(a) 
+of Assignment 5, and remove the original Geographic Region variable. The 
+dependent variable is the number of active physicians (Y), which should be 
+regressed on all remaining variables, including the geographic‑region dummy 
+variables.}
+
+```{R}
+cdi_data_raw = read.csv("CDI Data.csv")
+ignore = c("Identification.number", "County", "State")
+cdi_data = subset(cdi_data_raw, select = -match(ignore, names(cdi_data_raw)))
+cdi_data$Geographic.region = factor(cdi_data$Geographic.region)
+tail(cdi_data)
+```
+
+\textbf{a-) Use a stepwise variable selection method to identify the best 
+regression model. Then evaluate the model assumptions using appropriate 
+diagnostic plots and comment on whether the assumptions appear to be satisfied.}
+
+```{R}
+cdi_model = lm(Number.of.active.physicians ~ ., cdi_data)
+all_possible_cdi_models = ols_step_all_possible(cdi_model)
+all_possible_cdi_models
+```
+
+The simple regression against $Number.of.hospital.beds$ gives the highest
+adjusted R-Squared of 0.903.
+
+```{R}
+cdi_bestmodel = lm(Number.of.active.physicians ~ Number.of.hospital.beds, cdi_data)
+summary(cdi_bestmodel)
+plot(cdi_bestmodel$residuals[order(cdi_data$Number.of.active.physicians)])
+```
+The error variance is clearly heteroscedastic.
+
+\textbf{b-) The CDI data set contains 440 observations. Randomly divide the data 
+into five folds, each containing 88 observations, using set.seed(1023) to ensure 
+reproducibility. Perform 5‑fold cross‑validation to assess the stability of your 
+selected model in part a. For each fold, report the following metrics for both 
+the training and testing sets:}
+\begin{itemize}
+\item \textbf{Root Mean Squared Error (RMSE)}
+\item \textbf{R‑squared (R²)}
+\item \textbf{Mean Absolute Error (MAE)}
+\end{itemize}
+
+```{R}
+cdi_train_kfold <- trainControl(method = "cv", number = 5, savePredictions = "all")
+cdi_lm_cv <- train(Number.of.active.physicians ~ Number.of.hospital.beds, 
+                   cdi_data, method = "lm", trControl = cdi_train_kfold)
+print(cdi_lm_cv$resample)
+```
+
+\textbf{Summarize the results across all five folds and comment on the model’s 
+stability and predictive performance.}
+
+```{R}
+colMeans(cdi_lm_cv$resample[,c("RMSE", "Rsquared", "MAE")])
+```
+
+The range of Rsquared is ~17%. The least Rsquared is ~0.81. This model explains
+most of the variability in the number of active physicians.

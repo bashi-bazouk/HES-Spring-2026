@@ -1,0 +1,3714 @@
+```{R include=FALSE}
+library(rlang)
+library(ggplot2)
+library(faraway)
+library(knitr)
+library(MASS)
+library(formatR)
+library(glue)
+library(olsrr)
+library(dplyr)
+library(ALSM)
+library(reshape)
+library(pander)
+library(rmarkdown)
+library(markdown)
+library(tidyr)
+library(GGally)
+library(ggpubr)
+library(lmtest)
+library(caret)
+library(fastDummies)
+library(magick)
+library(tinytex)
+library(ggeffects)
+library(ggpubr)
+library(car)
+library('fastDummies')
+library(ISLR2)
+library(glmnet)
+library(tree)
+library(ResourceSelection)
+```
+### ../Modules/Week 1/CSCI E-106 Assignment 1Solutions.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+load(url("https://raw.githubusercontent.com/cran/faraway/master/data/prostate.rda"))
+
+```
+
+
+```{R}
+a<-nrow(prostate)
+
+print(a)
+
+```
+
+
+```{R}
+summary(prostate)[4,]  #mean
+summary(prostate)[3,]  #median
+```
+
+
+```{R}
+outliers <- function(x) {
+  q1 <- quantile(x, 0.25, na.rm = TRUE)
+  q3 <- quantile(x, 0.75, na.rm = TRUE)
+  iqr <- q3 - q1
+  lower_bound <- q1 - 1.5 * iqr
+  upper_bound <- q3 + 1.5 * iqr
+  return(x < lower_bound | x > upper_bound)
+}
+
+# Apply outlier detection to each variable
+outlier_summary <- sapply(prostate, function(x) sum(outliers(x), na.rm = TRUE))
+
+# Print outlier summary (number of outliers)
+print(outlier_summary)
+
+```
+
+
+```{R}
+#Boxplot
+
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1)) 
+
+for (v in names(prostate)) {
+  boxplot(prostate[[v]], main = v)
+}
+
+
+
+```
+
+
+```{R}
+#correlation
+correlation_matrix <- cor(prostate)
+correlation_matrix
+
+#Correlation with the variable "lpsa"
+cor_lpsa <- cor(prostate)[, "lpsa"]
+
+cor_lpsa
+
+
+#Scatterplots
+predictors <- setdiff(names(prostate), "lpsa")
+
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1))  
+
+for (v in predictors) {
+  plot(
+    prostate[[v]], prostate$lpsa,
+    xlab = v,
+    ylab = "lpsa",
+    main = paste(v, "vs lpsa")
+  )
+}
+
+```
+
+
+```{R}
+model_1 <- lm(lpsa ~ lcavol, data = prostate)
+model_2 <- lm(lpsa ~ lweight, data = prostate)
+model_3 <- lm(lpsa ~ age, data = prostate)
+
+model_1
+model_2
+model_3
+
+```
+
+
+```{R}
+#Show Models
+summary(model_1)
+summary(model_2)
+summary(model_3)
+
+par(mfrow = c(1, 3), mar = c(4, 4, 2, 1)) 
+
+# Model 1: lpsa ~ lcavol
+plot(
+  prostate$lcavol, prostate$lpsa,
+  xlab = "lcavol", ylab = "lpsa",
+  main = "lpsa vs lcavol"
+)
+abline(lm(lpsa ~ lcavol, data = prostate), col = "red", lwd = 2)
+
+# Model 2: lpsa ~ lweight
+plot(
+  prostate$lweight, prostate$lpsa,
+  xlab = "lweight", ylab = "lpsa",
+  main = "lpsa vs lweight"
+)
+abline(lm(lpsa ~ lweight, data = prostate), col = "red", lwd = 2)
+
+# Model 3: lpsa ~ age
+plot(
+  prostate$age, prostate$lpsa,
+  xlab = "age", ylab = "lpsa",
+  main = "lpsa vs age"
+)
+abline(lm(lpsa ~ age, data = prostate), col = "red", lwd = 2)
+
+
+```
+
+
+### ../Modules/Week 1/Lecture 1 R Codes Part 1.Rmd
+
+```{R}
+knitr::opts_chunk$set(error = TRUE)
+```
+
+
+```{R}
+#install faraway package 
+install.packages("faraway")
+#once package is installed, you don't need to run the code in line 18
+#you need to load the package every time you start the R session
+library(faraway)
+library(MASS)
+install.packages("ISLR2")
+library(ISLR2)
+```
+
+
+```{R}
+#head comment shows the first six observation of the data
+head(Boston)
+#following two lines shows the data dictionary
+help(Boston)
+?Boston
+#str comment shows the data frame 
+str(Boston)
+```
+
+
+```{R}
+lm.fit = lm(medv ~ lstat,data=Boston)
+```
+
+
+```{R}
+lm.fit <- lm(medv ~ lstat, data = Boston)
+attach(Boston)
+lm.fit <- lm(medv ~ lstat)
+```
+
+
+```{R}
+lm.fit
+summary(lm.fit)
+```
+
+
+```{R}
+names(lm.fit)
+coef(lm.fit)
+```
+
+
+```{R}
+confint(lm.fit)
+```
+
+
+```{R}
+predict(lm.fit, data.frame(lstat = (c(5, 10, 15))),
+    interval = "confidence")
+predict(lm.fit, data.frame(lstat = (c(5, 10, 15))),
+    interval = "prediction")
+```
+
+
+```{R}
+plot(lstat, medv)
+abline(lm.fit)
+```
+
+
+```{R}
+plot(lstat, medv)
+abline(lm.fit, lwd = 3)
+abline(lm.fit, lwd = 3, col = "red")
+plot(lstat, medv, col = "red")
+plot(lstat, medv, pch = 20)
+plot(lstat, medv, pch = "+")
+```
+
+
+### ../Modules/Week 2/CSCI E-106 Assignment 2 - Solutions.Rmd
+
+```{R}
+PMQ1<- read.csv("../Assignments/6/CDI Data.csv")
+
+summary(PMQ1)
+Y <- PMQ1$Number.of.active.physicians
+X <- PMQ1$Total.personal.income
+
+CDI_data<-data.frame(cbind(Y,X))
+```
+
+
+```{R}
+model<-lm(Y ~ X, data = CDI_data)
+Estimate_b0<-coef(summary(model))[1, "Estimate"]
+Estimate_b1<-coef(summary(model))[2, "Estimate"]
+
+StandardErr_b0<-coef(summary(model))[1, "Std. Error"]
+StandardErr_b1<-coef(summary(model))[2, "Std. Error"]
+
+print(paste("Estimate b0: ",Estimate_b0))
+print(paste("Estimate b1: ",Estimate_b1))
+
+print(paste("Standard error b0: ",StandardErr_b0))
+print(paste("Standard error b1: ",StandardErr_b1))
+# Print the equation (refer to lines above)
+summary(model)
+```
+
+
+```{R}
+#Step 1: H0: intercept =0, HA: intercept is not 0
+#        H0: slope=0     , HA: slope is not 0
+#Step 2: for testing individual coefficients on a sample one may use a #two sides t statistical test.
+#Step 3: the critical t -value applicable given alpha=0.05 and n-2 #degrees of freedom.
+#Step 4: decision rule, when t > t critical reject null
+#Step 5: calculate t statistic
+#First define the significance level — the probability of rejecting the null hypothesis when it is actually true (alpha is the Type I error). That is the % error you are willing to accept.
+alpha = 0.05
+# Second, to calculate the confidence level, you divide by 2 because it is a two tail test
+half_alpha = alpha / 2
+# Third: Calculate the degrees of freedom is n - p, that is the number of parameters
+df<-nrow(CDI_data) - nrow(summary(model)$coefficients)
+# Fourth : Determine the critical t value using the df and the significance levels
+value<-formatC(qt(half_alpha,df,lower.tail=FALSE))    
+print(paste("Critical T values: ",value))
+#coefficients
+matrix_coef <- round(summary(model)$coefficients,5)  # Extract coefficients in matrix
+matrix_coef   
+
+my_estimates <- round(matrix_coef[ , 1],5)  # Matrix manipulation to extract estimates
+#Step 6: For the Intercept, p-value is 0.12917, Pr(>|t|) > 0.05 there no sufficient statistical evidence to reject Ho. For the slope, Pr(>|t|) < 0.05 there is sufficient statistical evidence to reject null. Also t-values (-1.52 and 62.41) confirm, the first is smaller than the 1.965 critical values and the other is larger than t-critical of 1.965
+# Get 95% confidence intervals for all coefficients (default)
+intervals <- confint(model)
+# The confidence interval for the slope (X)
+slope_interval <- intervals["X", ]
+print(slope_interval)
+```
+
+
+```{R}
+options("scipen" = 12)
+# Step 1: Find the range of the personal income to see if 100000,250000 and 50000 are included.
+range_values<-range(X)
+maximum <-max(X)
+# Step 2: 95% CI for the estimated mean within range
+# 100000 and 50000 are in range, so when predicting we are interpolating within development data
+ci<-predict(model, data.frame(X=50000), interval = "confidence", level=0.95)
+ci
+
+ci <- predict(model, data.frame(X=100000),interval = "confidence", level = 0.95)
+ci
+# Step 3: 95% CI for the predicted mean given the new observation out of range
+# The Large Value 250,000 is out of range, we use prediction interval to account for uncertainty
+ci <- predict(model, data.frame(X=250000), interval = "prediction", level = 0.95)
+ci
+```
+
+
+```{R}
+variance<-(summary(model)$sigma)^2
+variance
+# OR
+Error_variance = sum(residuals(model)^2) / df.residual(model)
+```
+
+
+```{R}
+set.seed(123)
+# Data frame with columns X and Y
+prg.hw2 <- function(df, n_sim, sample_size) {
+  # Initialize matrix for b0 and b1
+  out <- matrix(0, nrow = n_sim, ncol = 2)
+  colnames(out) <- c("beta0", "beta1")
+  
+  for (i in 1:n_sim) {
+    # 1. Randomly select row indices
+    indices <- sample(1:nrow(df), size = sample_size, replace = FALSE)
+    
+    # 2. Subset the data
+    sample_data <- df[indices, ]
+    
+    # 3. Fit regression model Y ~ X
+    f <- lm(Y ~ X, data = sample_data)
+    
+    # 4. Record coefficients
+    out[i, ] <- f$coefficients
+  }
+  return(out)
+}
+
+# Execute for 1,000 samples of 400 observations
+results <- prg.hw2(df = CDI_data, n_sim = 1000, sample_size = 400)
+### Calculate the mean and variance of $\beta_0$ and $\beta_1$ based on the 1,000 different regression line and compare against the regression model in question 1 part b.
+
+head(results)
+
+#print for comparison between simulated average values and 1b
+print(paste("Estimate b0: ",Estimate_b0))
+print(paste("Estimate b1: ",Estimate_b1))
+
+print(paste("Standard error b0: ",StandardErr_b0))
+print(paste("Standard error b1: ",StandardErr_b1))
+
+################################## To Compare
+
+average_parameter<-apply(results,2,mean)
+print(paste("Avg Estimate b0: ",average_parameter[1]))
+print(paste("Avg Estimate b1: ",average_parameter[2]))
+
+average_std<-sqrt(apply(results,2,var))
+print(paste("Avg StdardErr b0:",average_std[1]))
+print(paste("Avg StdardErr b1:",average_std[2]))
+
+################################## To Compare
+
+
+
+
+```
+
+
+### ../Modules/Week 3/Deck 3 Codes.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+LicDrivers <- read.csv("../Modules/Week 3//LicensedDrivers.csv")
+str(LicDrivers)
+LModel = lm(Drivers~Year,data = LicDrivers)
+plot(LicDrivers$Year,LicDrivers$Drivers)
+abline(LModel)
+```
+
+
+```{R}
+summary(LModel)
+```
+
+
+```{R}
+par(mfrow=c(2,2))
+plot(LModel)
+```
+
+
+```{R}
+par(mfrow=c(1,1))
+plot(LModel,which=1)
+```
+
+
+```{R}
+plot(LModel,which=2)
+```
+
+
+```{R}
+plot(LModel,which=3)
+```
+
+
+```{R}
+plot(LModel,which=5)
+```
+
+
+```{R}
+toluca_data <- read.csv("../Lectures/1/toluca_data.csv")
+#we want two graphs on the same page
+par(mfrow=c(1,2))
+#type="l" will draw line
+plot(toluca_data$workhrs, type="l", ylab="Lot Size")
+#type="p" is the default option, will give you the scatter plot
+plot(toluca_data$workhrs, type="p", ylab="Lot Size")
+# fitting the regression model 
+toluca.reg <- lm(workhrs ~ lotsize,data=toluca_data)
+# getting the summary regression output:
+summary(toluca.reg)
+
+#error vs. Xi plot
+ei<-toluca.reg$residuals
+plot(toluca_data$workhrs,ei, type="l", xlab="Lot Size",ylab="Residuals")
+
+#abs(error) vs. Xi plot
+plot(toluca_data$workhrs,abs(ei), type="l", xlab="Lot Size",ylab="Absolute Residuals")
+
+# error^2 vs. Xi plot
+plot(toluca_data$workhrs,ei^2, type="l", xlab="Lot Size",ylab="Squared Residuals")
+
+# ei. vs predicted
+plot(toluca.reg$fitted.values,ei, type="l", xlab="Lot Size",ylab="Residuals")
+
+# ei. vs time sequence
+plot(ei, type="l",ylab="Residuals")
+
+# QQ PLOT (aka normal probability plot) 
+
+error.std = rstandard(toluca.reg)
+qqnorm(error.std,ylab="Standardized Residuals",xlab="Normal Scores",main="Toluca Data")
+qqline(error.std, col = "steelblue", lwd = 2)
+
+#alternatively, you can QQ plot 
+par(mfrow=c(2,2))
+plot(toluca.reg)
+```
+
+
+```{R}
+shapiro.test(toluca.reg$residuals)
+```
+
+
+```{R}
+Dataset_1.20 <- read.csv("../Lectures/3/Dataset_1_20.csv", header=FALSE)
+f3.4<-lm(Dataset_1.20$V1 ~ Dataset_1.20$V2)
+summary(f3.4)
+par(mfrow=c(2,2))
+plot(f3.4)
+ei<-f3.4$residuals
+summary(Dataset_1.20$V2)
+
+#We will separate the data based on the median value, we first need to create a data frame with X,Y and errors.
+
+pop1.20<-data.frame(cbind(Dataset_1.20$V1, Dataset_1.20$V2,ei))
+p1<-pop1.20[pop1.20[,2]< 5,]
+p2<-pop1.20[pop1.20[,2]>=5,]
+
+#get the medians for each sample
+M1<-summary(p1[,3])[3]
+M2<-summary(p2[,3])[3]
+#get the n for each sample
+N1<-dim(p1)[1]
+N2<-dim(p2)[1]
+
+#calculate dij = abs(error - median.error)
+d1<-abs(p1[,3]-M1)
+d2<-abs(p2[,3]-M2)
+
+#calculate the pooled variance
+s2<-sqrt((var(d1)*(N1-1)+var(d2)*(N2-1))/(N1+N2-2))
+
+#calcualte the t statistics and p value
+Den<- s2*sqrt(1/N1+1/N2)
+Num<- mean(d1)-mean(d2)
+
+T= Num/Den
+1-pt(T,N1+N2-2)
+```
+
+
+```{R}
+library(car)
+group=I(pop1.20[,2]< 5)*1
+leveneTest(ei, group, center=median)
+```
+
+
+```{R}
+library(car)
+group=I(pop1.20[,2]< 5)*1
+leveneTest(Dataset_1.20$V1, group, center=median)
+```
+
+
+```{R}
+#using the library
+library(olsrr)
+ols_test_breusch_pagan(f3.4)
+```
+
+
+```{R}
+#from the new model, get SSR.S
+ei<-f3.4$residuals
+ei2<-ei^2
+g<-lm(ei2~Dataset_1.20$V2)
+summary(g)
+anova(g)
+SSR.S=  15155
+#from the original model get SSE
+anova(f3.4)
+SSE =  3416
+
+#n is 45
+n=45
+Chi_Square=(SSR.S/2) / ((SSE/n)^2)
+1-pchisq(Chi_Square,1)
+
+
+
+```
+
+
+```{R}
+#Library below can only be used for one independent variable
+#install.packages("EnvStats")
+library(EnvStats)
+anovaPE(toluca.reg)
+
+#Alternative  way of performing lack of fit
+Reduced <- lm(workhrs ~ lotsize,data=toluca_data)
+Full <- lm(workhrs ~ 0 + as.factor(lotsize),data = toluca_data)
+anova(Reduced, Full)
+```
+
+
+```{R}
+library(MASS)
+par(mfrow=c(1,1))
+PlasmaLevel <- data.frame(X=c(1:20), Y=c(1:20), LogY=log(c(1:20)), lamda=c(1:20))
+f<-lm(Y~X,data=PlasmaLevel)
+boxcox(f,lambda=seq(-5,5,by=.1))
+boxcox(f,lambda=seq(-1,1,by=.1))
+boxcox(f,lambda=seq(-2,1,by=.05))
+#actual value lambda
+a=boxcox(f,lambda=seq(-5,5,by=.1))
+lamda=a$x[which.max(a$y)]
+lamda
+
+f1<-lm(LogY~X,data=PlasmaLevel)
+f2<-lm(Y^lamda~X,data=PlasmaLevel)
+summary(f1)
+summary(f2)
+```
+
+
+```{R}
+par(mfrow=c(1,1))
+f3.4<-lm(Dataset_1.20$V1 ~ Dataset_1.20$V2)
+plot(Dataset_1.20$V1 ~ Dataset_1.20$V2, main = "lowess")
+abline(f3.4,col=1)
+lines(lowess(Dataset_1.20$V1 ~ Dataset_1.20$V2,f=0.01), col = 2)
+lines(lowess(Dataset_1.20$V1 ~ Dataset_1.20$V2,f=0.1), col = 3)
+lines(lowess(Dataset_1.20$V1 ~ Dataset_1.20$V2,f=1/3), col = 4)
+lines(lowess(Dataset_1.20$V1 ~ Dataset_1.20$V2,f=2/3), col = 5)
+lines(lowess(Dataset_1.20$V1 ~ Dataset_1.20$V2, f=.2), col = 6)
+lines(lowess(Dataset_1.20$V1 ~ Dataset_1.20$V2, f=1), col = 7)
+#legend(5, 120, c(paste("f = ", c("0.01","0.1","1/3","2/3", ".2","1"))), lty = 1, col = 2:7)
+legend(8.5, 50, c(paste("f = ", c("0.01","0.1","1/3","2/3", ".2","1"))), lty = 1, col = 2:7)
+```
+
+
+```{R}
+y=Dataset_1.20$V1 
+x=Dataset_1.20$V2
+model <- loess(y ~ x, span = 0.75)
+
+x_new <- seq(min(x), max(x), length.out = 200)
+y_hat <- predict(model, newdata = data.frame(x = x_new))
+
+plot(x, y)
+lines(x_new, y_hat, col = "red", lwd = 2)
+abline(f3.4)
+plot(x, y,main="Linear Regression")
+abline(f3.4)
+```
+
+
+```{R}
+#loading Prostate Data
+load(url("https://raw.githubusercontent.com/cran/faraway/master/data/prostate.rda"))
+head(prostate)
+
+
+y=prostate$lpsa
+x=prostate$lcavol
+
+#loess Regression
+modelLoess <- loess(y ~ x, span = 0.75)
+
+x_new <- seq(min(x), max(x), length.out = 200)
+y_hat <- predict(modelLoess, newdata = data.frame(x = x_new))
+#linear regression
+f4<-lm(y~x)
+plot(x, y)
+lines(x_new, y_hat, col = "red", lwd = 2)
+abline(f4)
+
+#Calculate model performance Stats
+
+library(caret)
+
+
+#performance of LOESS 
+#get the predicted values
+PredictedLoess<-predict(modelLoess, newdata = data.frame(x)) 
+#create a data frame with 2 columns actual and predicted values
+ModelDataLoess<-data.frame(obs = y, pred=PredictedLoess)
+#calculate performance statistics
+outModelDataLoess<-defaultSummary(ModelDataLoess)
+
+#performance of Regression
+#get the predicted values
+PredictedReg<-predict(f4, newdata = data.frame(x)) 
+#create a data frame with 2 columns actual and predicted values
+ModelDataReg<-data.frame(obs = y, pred=PredictedReg)
+#calculate performance statistics
+outModelDataReg<-defaultSummary(ModelDataReg)
+
+
+out<-rbind(outModelDataLoess,outModelDataReg)
+dimnames(out)[[1]]<-c("LOESS","Reg")
+out
+```
+
+
+```{R}
+Crime.Rate <- read.csv("../Modules/Week 3//Crime Rate.csv")
+cor.test(Crime.Rate$X,Crime.Rate$Y, method ="pearson")
+
+
+cor.test(Crime.Rate$X,Crime.Rate$Y, method ="spearman")
+```
+
+
+### ../Modules/Week 3/Lab02Spring2026.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(faraway)
+
+```
+
+
+```{R}
+# Load our data! Here we are loading a txt file so note the delim
+# Assigning the data to a data frame object
+# called df20 and then we want to name the columns
+
+
+df20 = read.delim("../Modules/Week 3/CH01PR20.txt", header=FALSE, sep="")
+colnames(df20) = c("y", "x")
+```
+
+
+```{R}
+#this is our estimated regression function 
+lmFit20 = lm(y~x, df20)
+#lets look at our estimated regression function
+
+summary(lmFit20)
+```
+
+
+```{R}
+#here we will plot our estimated regression function 
+plot(df20$x, df20$y, ylab="Minutes", xlab="Copiers")
+
+#here is our best fit line on our regression. We can look at our outliers & decide if the relationship is linear.
+abline(lmFit20)
+```
+
+
+```{R}
+#calculate your standard error 
+coef(summary(lmFit20))[, "Std. Error"]
+
+#or you can show this with your summary
+summary(lmFit20)
+
+```
+
+
+```{R}
+library(caret)
+#we can use predict to check on the future values based on the previous data and with the help of the linear model. This will help tell us how our model is performing over time.
+Predicted<-predict(lmFit20,df20)
+
+#once you predict - you want to see a summary
+#the defaultSummary() function in R is used to calculate 
+#and report standard performance metrics for regression models.
+
+Model<-data.frame(obs = df20$y, pred=Predicted)
+Model=defaultSummary(Model)
+print(Model)
+
+#from here we would expect you to look at the results and comment on your findings
+```
+
+
+```{R}
+# Load data
+df20 = read.delim("../Modules/Week 3/CH01PR20.txt", header=FALSE, sep="")
+colnames(df20) = c("y", "x")
+```
+
+
+```{R}
+# Create linear model from data
+lmFit20 = lm(y~x, df20)
+print(summary(lmFit20))
+```
+
+
+```{R}
+#Finding our t-distribution
+#In this case we want to first get our degrees of freedom which we can see from our summary is: 43 
+#or we can use our anova function to find the same
+anova(lmFit20)
+
+
+#We can find our t-distribution with our degrees of freedom
+tdist = qt(1-.10/2, 43)
+print(tdist)
+```
+
+
+```{R}
+#Use a 90 Percent Confidence Interval
+confint(lmFit20, level=.9)
+
+#or you can write it all out without a function: 
+c(15.0352-1.6811*0.4831, 15.0352+1.6811*0.4831)
+```
+
+
+```{R}
+t = ( 15.0352 - 0 ) / .4831
+print(t)
+
+```
+
+
+```{R}
+#Calculate the p-value 
+p = 1-pt(31.122,43) 
+print(p)
+```
+
+
+### ../Modules/Week 4/CSCI E-106 Assignment 4_Solutions_.Rmd
+
+```{R}
+#install.packages("visdat")
+library(visdat)
+
+sales.data<- read.csv("../Assignments/4/Sales Growth Data.csv")
+
+summary(sales.data)
+
+vis_miss(sales.data)
+
+# Looks OK
+```
+
+
+```{R}
+options("scipen" = 12)
+library(dplyr)
+#Step 1: Create bands
+sd.b1 <- dplyr::filter(sales.data, -.5<X, X<1.5)
+sd.b2 <- dplyr::filter(sales.data, 1.5<X, X<3.5)
+sd.b3 <- dplyr::filter(sales.data, 3.5<X, X<5.5)
+sd.b4 <- dplyr::filter(sales.data, 5.5<X, X<7.5)
+sd.b5 <- dplyr::filter(sales.data, 7.5<X, X<9.5)
+#Step 2: Find median X and Y of each band
+bands <- data.frame(
+  Median.X = c(median(sd.b1$X),median(sd.b2$X),median(sd.b3$X),median(sd.b4$X),median(sd.b5$X)), 
+  Median.Y = c(median(sd.b1$Y),median(sd.b2$Y),median(sd.b3$Y),median(sd.b4$Y),median(sd.b5$Y)),
+  row.names = c('b1', 'b2','b3', 'b4', 'b5')
+)
+
+#Step 3: Plot
+library(ggplot2)
+ggplot(sales.data) +
+    geom_point(aes(x=X, y=Y)) +
+    geom_line(data = bands, aes(x=Median.X, y=Median.Y))
+
+#Step 4: Create Neighborhoods
+n1 <- dplyr::filter(sales.data, -.5<X, X<1.5)
+n2 <- dplyr::filter(sales.data, 1.5<X, X<3.5)
+n3 <- dplyr::filter(sales.data, 3.5<X, X<5.5)
+n4 <- dplyr::filter(sales.data, 5.5<X, X<7.5)
+n5 <- dplyr::filter(sales.data, 7.5<X, X<9.5)
+
+#Step 5: Find yhat for each neighborhood
+yhat1 <- predict(lm(Y~X,n1), data.frame(X=median(n1$X)))
+yhat2 <- predict(lm(Y~X,n2), data.frame(X=median(n2$X)))
+yhat3 <- predict(lm(Y~X,n3), data.frame(X=median(n3$X)))
+yhat4 <- predict(lm(Y~X,n4), data.frame(X=median(n4$X)))
+yhat5 <- predict(lm(Y~X,n5), data.frame(X=median(n5$X)))
+
+#Step 6: Put result in dataframe
+neighborhoods <- data.frame(
+    Median.X = c(median(n1$X),median(n2$X),median(n3$X),median(n4$X),median(n5$X)), 
+    Y.hat = c(yhat1,yhat2,yhat3,yhat4,yhat5),
+    row.names = c('n1', 'n2','n3', 'n4', 'n5')
+)
+
+#Step 7: Plot with confidence band
+ggplot(sales.data) + 
+    geom_point(aes(x=X, y=Y)) + 
+    geom_line(data = neighborhoods, aes(x=Median.X, y=Y.hat)) +
+    geom_smooth(aes(x=X, y=Y), method = 'lm', formula = y~x)
+
+
+
+
+
+```
+
+
+```{R}
+options("scipen" = 12)
+#Step 1: Create bands
+sdb.b1 <- dplyr::filter(sales.data, -0.5<X, X<2.5)
+sdb.b2 <- dplyr::filter(sales.data, 0.5<X, X<3.5)
+sdb.b3 <- dplyr::filter(sales.data, 1.5<X, X<4.5)
+sdb.b4 <- dplyr::filter(sales.data, 2.5<X, X<5.5)
+sdb.b5 <- dplyr::filter(sales.data, 3.5<X, X<6.5)
+sdb.b6 <- dplyr::filter(sales.data, 4.5<X, X<7.5)
+sdb.b7 <- dplyr::filter(sales.data, 5.5<X, X<9.5) #to include the 9
+
+#Step 2: Find yhat for each neighborhood
+yhatb1 <- predict(lm(Y~X,sdb.b1), data.frame(X=1))
+yhatb2 <- predict(lm(Y~X,sdb.b2), data.frame(X=2))
+yhatb3 <- predict(lm(Y~X,sdb.b3), data.frame(X=3))
+yhatb4 <- predict(lm(Y~X,sdb.b4), data.frame(X=4))
+yhatb5 <- predict(lm(Y~X,sdb.b5), data.frame(X=5))
+yhatb6 <- predict(lm(Y~X,sdb.b6), data.frame(X=6))
+yhatb7 <- predict(lm(Y~X,sdb.b7), data.frame(X=7))
+
+#Step 2: Find median X and Y of each band
+simple.loess <- data.frame(
+  X = c(1,2,3,4,5,6,7), 
+  Y = c(yhatb1,yhatb2,yhatb3,yhatb4,yhatb5,yhatb6,yhatb7),
+  row.names = c('b1', 'b2','b3', 'b4', 'b5', 'b6', 'b7')
+)
+
+plot(simple.loess$X, simple.loess$Y, col="3")
+# segments(simple.loess[1,1], simple.loess[1,2], simple.loess[2,1], simple.loess[2,2])
+# segments(simple.loess[2,1], simple.loess[2,2], simple.loess[3,1], simple.loess[3,2])
+# segments(simple.loess[3,1], simple.loess[3,2], simple.loess[4,1], simple.loess[4,2])
+# segments(simple.loess[4,1], simple.loess[4,2], simple.loess[5,1], simple.loess[5,2])
+# segments(simple.loess[5,1], simple.loess[5,2], simple.loess[6,1], simple.loess[6,2])
+# segments(simple.loess[6,1], simple.loess[6,2], simple.loess[7,1], simple.loess[7,2])
+
+```
+
+
+```{R}
+sales.data.model <- lm(Y~X, data=sales.data)
+preds <- predict(sales.data.model, interval='confidence', level = 0.95)
+plot(sales.data$X, sales.data$Y)
+lines(sales.data$X, preds[ ,3], lty = 'solid', col = '7')
+lines(sales.data$X, preds[ ,2], lty = 'solid', col = '7')
+
+# points(simple.loess$X, simple.loess$Y, col="3")
+# segments(simple.loess[1,1], simple.loess[1,2], simple.loess[2,1], simple.loess[2,2])
+# segments(simple.loess[2,1], simple.loess[2,2], simple.loess[3,1], simple.loess[3,2])
+# segments(simple.loess[3,1], simple.loess[3,2], simple.loess[4,1], simple.loess[4,2])
+# segments(simple.loess[4,1], simple.loess[4,2], simple.loess[5,1], simple.loess[5,2])
+# segments(simple.loess[5,1], simple.loess[5,2], simple.loess[6,1], simple.loess[6,2])
+# segments(simple.loess[6,1], simple.loess[6,2], simple.loess[7,1], simple.loess[7,2])
+
+```
+
+
+```{R}
+library(faraway)
+data(ozone,package="faraway")
+```
+
+
+```{R}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/ozone.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(ozone)
+```
+
+
+```{R}
+library(faraway)
+library(caret)
+
+#First load data
+data(ozone,package="faraway")
+
+# Split the data into training and testing samples
+set.seed(1023) 
+#split the data into two parts 70-30 split
+DataSplit<-createDataPartition(y = ozone$O3, p = 0.7, list = FALSE)
+#creating the train and test data set
+ozone.train<-ozone[DataSplit,]
+ozone.test<-ozone[-DataSplit,]
+# always check if you have 70% 
+num_observations <- nrow(ozone)
+num_observations_train <- nrow(ozone.train)
+size_test <- (num_observations_train / num_observations)*100
+print(paste("Percentage in Train: ",size_test))
+# we conclude 71% is sufficiently close
+
+
+
+```
+
+
+```{R}
+# Fit linear regression function
+attach(ozone)
+model <- lm(O3  ~ temp + humidity + ibh, data = ozone.train)
+summary(model)
+summary(model)
+# Obtain,  the  residuals  and  plot  them  against  the fitted values. Also prepare a normal probability plot.
+oldpar <- par(mfrow = c(2,2))
+plot(model, which = 1:2)
+par(oldpar)
+
+```
+
+
+```{R}
+library(car)
+car::qqPlot(model, main = "QQ Plot")
+par(mfrow=c(2,2))
+plot(model)
+
+# Prepare a scatter plot of the data
+summary(model)
+```
+
+
+```{R}
+library(caret)
+PredictedTrain<-predict(model,ozone.train)
+ModelTrain<-data.frame(obs = ozone.train$O3, pred=PredictedTrain)
+Model_Train=defaultSummary(ModelTrain)
+
+PredictedTest<-predict(model,ozone.test)
+ModelTest<-data.frame(obs = ozone.test$O3, pred=PredictedTest)
+Model_Test=defaultSummary(ModelTest)
+
+g = rbind(Model_Train,Model_Test)
+g
+```
+
+
+```{R}
+#We reject the null hypothesis as p.value is 0.00005463 < 0.05 - so, we conclude that the error variances are not constant.
+library(lmtest)
+bptest(model, studentize = FALSE)
+
+```
+
+
+```{R}
+library(MASS)
+# To see more clearly the best value of lambda, we use an ample range
+bc=boxcox(model,lambda = seq(-2,2,0.1))
+# Narrowing our search
+bc=boxcox(model,lambda = seq(-0.5,0.5,0.01))
+best.lam=bc$lambda[which(bc$lambda==max(bc$lambda))]
+# Obtain the optima lambda
+best.lam
+
+model_Transformed<-lm(O3^(best.lam)  ~ temp + humidity + ibh, data = ozone.train)
+summary(model_Transformed)
+
+# Seems that model is slightly better in sample
+
+library(caret)
+PredictedTrain0<-predict(model_Transformed,ozone.train)
+# Reverse back the transformation you took (1/best.lam) so you must reverse
+PredictedTrain<-PredictedTrain0^(1/best.lam)
+# Now you have apples to apples
+ModelTrain<-data.frame(obs = ozone.train$O3, pred=PredictedTrain)
+Model_Train=defaultSummary(ModelTrain)
+## And on the test data
+PredictedTest0<-predict(model_Transformed,ozone.test)
+PredictedTest<-PredictedTest0^(1/best.lam)
+# Now you have apples to apples
+ModelTest<-data.frame(obs = ozone.test$O3, pred=PredictedTest)
+Model_Test=defaultSummary(ModelTest)
+
+g = rbind(Model_Train,Model_Test)
+g
+
+```
+
+
+```{R}
+library(faraway)
+data(teengamb ,package="faraway")
+```
+
+
+```{R}
+load(url("https://raw.githubusercontent.com/cran/faraway/master/data/teengamb.rda"))
+head(teengamb)
+```
+
+
+```{R}
+#Step 0: Data Preparations
+#load necessary libraries
+library(faraway)
+library(dplyr)
+#load data
+data("teengamb")
+str(teengamb)
+#check for missing and NAs
+apply(teengamb ,2,function(x) sum(is.na(x))) 
+# development data set
+teengamb <- teengamb
+
+
+```
+
+
+```{R}
+options("scipen" = 12)  ##Used to avoid displaying numbers such as 1+e3 (exponent), changing the options
+
+
+# Fit linear regression function
+attach(ozone)
+model <- lm(O3  ~ temp + humidity + ibh, data = ozone.train)
+summary(model)#Step 1: Construct your prediction model using your development sample
+teengame_model <- lm(gamble ~ factor(sex) + status + income + verbal, data=teengamb)
+# Obtain,  the  residuals  and  plot  them  against  the fitted values. Also prepare a normal probability plot.
+par(mfrow=c(2,2))
+plot(teengame_model, which = 1:2)
+summary(teengame_model)
+
+
+```
+
+
+```{R}
+options("scipen" = 12)
+
+# Step 2: Predict the data(teengamb)amount that a male with average..
+male_teen <- teengamb %>% filter(teengamb$sex == factor(0))
+predict(teengame_model, data.frame(sex=factor(0),
+status=mean(male_teen$status),
+income=mean(male_teen$income),
+verbal=mean(male_teen$verbal)),
+interval="predict",
+level=0.95)
+male_teen
+summary(teengame_model)
+#of note the variables verbal and status are not statistically different from zero
+#however we keep them because they must be included in the specification of the model
+
+```
+
+
+```{R}
+predict(teengame_model, data.frame(sex=factor(0),
+status=max(male_teen$status),
+income=max(male_teen$income),
+verbal=max(male_teen$verbal)),
+interval="predict",
+level=0.95)
+```
+
+
+```{R}
+teengame_model_transformed <- lm(sqrt(gamble) ~ factor(sex) + status + income + verbal, data=teengamb)
+pred_int <- predict(teengame_model_transformed, data.frame(sex=factor(0),
+status=mean(male_teen$status),
+income=mean(male_teen$income),
+verbal=mean(male_teen$verbal)),
+interval="predict",
+level=0.95)
+a<-pred_int
+#Reverse the transformation to obtain the interval in the original units
+a^2
+```
+
+
+```{R}
+teengame_model_transformed <- lm(sqrt(gamble) ~ factor(sex) + status + income + verbal, data=teengamb)
+pred_int2 <- predict(teengame_model_transformed,data.frame(sex=factor(1),                   status=20,
+income=1,
+verbal=10),
+interval="predict",
+level=0.95)
+b<-pred_int2
+#Reverse the transformation to obtain the interval in the original units
+b^2
+```
+
+
+### ../Modules/Week 4/MLR Part II.Rmd
+
+```{R}
+library(MASS)
+library(ISLR2)
+lm.fit <- lm(medv ~ ., data = Boston)
+summary(lm.fit)
+```
+
+
+```{R}
+lm.red<- lm(medv ~ crim+zn+chas+nox+rm+dis+rad+tax+ptratio+lstat,  data = Boston)
+anova(lm.red,lm.fit)
+```
+
+
+```{R}
+lm.fit1 <- lm(medv ~ . - age, data = Boston)
+summary(lm.fit1)
+```
+
+
+```{R}
+lm.fit1 <- update(lm.fit, ~ . - indus )
+summary(lm.fit1)
+```
+
+
+```{R}
+lm.fit2 <- update(lm.fit1, ~ . - age)
+summary(lm.fit2)
+#we can drop them at the same time
+
+lm.fit2 <- update(lm.fit, ~ . - age - indus)
+summary(lm.fit2)
+```
+
+
+```{R}
+par(mfrow=c(2,2))
+plot(lm.fit2)
+par(mfrow=c(1,1))
+library(MASS)
+par(mfrow=c(1,1))
+boxcox(lm.fit2,lambda=seq(-5,5,by=.1))
+#getting the value of lambda
+b=boxcox(lm.fit2,lambda=seq(-5,5,by=.1))
+lambda<-b$x[which.max(b$y)]
+lambda
+
+lm.fit3<-lm(log(medv) ~ crim+zn+chas+nox+rm+dis+rad+tax+ptratio+lstat,  data = Boston)
+summary(lm.fit3)
+par(mfrow=c(2,2))
+plot(lm.fit3)
+```
+
+
+```{R}
+library(lmtest)
+bptest(lm.fit2)
+#on transformed model
+bptest(lm.fit3)
+```
+
+
+```{R}
+shapiro.test(lm.fit2$residuals)
+```
+
+
+```{R}
+lm.fit3<- lm(log(medv) ~ crim + zn + chas + nox + rm + dis + rad + tax + ptratio +  lstat, data = Boston)
+summary(lm.fit3)
+par(mfrow=c(2,2))
+plot(lm.fit3)
+bptest(lm.fit3)
+```
+
+
+### ../Modules/Week 4/Lab03Spring20261.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+df19 = read.table("../Modules/Week 4/CH01PR19.txt", 
+                          header=FALSE, sep="", 
+                          col.names=c("y","x"))
+
+lmFit19 = lm(y~x, data = df19)
+anova(lmFit19)
+
+```
+
+
+```{R}
+f = 3.5878 / .3883
+print(f) 
+
+```
+
+
+```{R}
+#you can find SSE and SSR from lmFit19 
+anova(lmFit19)
+SSE = 45.818 
+SSR = 3.588 
+
+#you can find SSE(R) from lmFit19_r when x= 1 (this is our reduced regression) 
+lmFit19_r = lm(formula = y ~ 1, data= df19)
+anova(lmFit19_r)
+
+# SSE(R) = 49.405 
+
+#rr = SSR / SSE
+rr = 3.588/49.405 
+print(rr)
+
+```
+
+
+```{R}
+df_crimeRate = read.table("../Modules/Week 4/CH01PR28.txt", 
+                          header=FALSE, sep="", 
+                          col.names=c("cr","ed"))
+lmFit1_28 = lm(cr~ed, data=df_crimeRate)
+summary(lmFit1_28)
+
+#here we are working with a t-sided t-test
+
+#calculcate t-value
+t = -170.58 / 41.57
+print(t)
+
+#calculate critical value
+#our degrees of freedom is showing that you have about 84 observations minus 2 (estimating 2 unknown parameters - slope and intercept)
+critical = qt(0.995, df = 82)
+print(critical)
+```
+
+
+### ../Modules/Week 4/MLR Part I.Rmd
+
+```{R}
+load(url("https://raw.githubusercontent.com/cran/faraway/master/data/gala.rda"))
+head(gala[,-2])
+```
+
+
+```{R}
+lmod<-lm(Species~Area+Elevation+Nearest+Scruz+Adjacent,data=gala)
+summary(lmod)
+```
+
+
+```{R}
+X<-model.matrix(lmod)
+```
+
+
+```{R}
+Y<-gala$Species
+
+```
+
+
+```{R}
+H<-solve(t(X)%*%(X))%*%t(X)
+```
+
+
+```{R}
+Beta<-H%*%Y
+Beta
+```
+
+
+```{R}
+names(lmod)
+lmodsum<-summary(lmod)
+names(lmodsum)
+sqrt(deviance(lmod)/df.residual(lmod))
+lmodsum$sigma
+```
+
+
+```{R}
+xtxi<-lmodsum$cov.unscaled
+sqrt(diag(xtxi))*lmodsum$sigma
+summary(lmod)
+lmodsum$coef[,2]
+```
+
+
+```{R}
+IID <- read.csv("../Modules/Week 4//Insurance Inovation Data.csv")
+```
+
+
+```{R}
+library('fastDummies')
+IID.Dat<-dummy_cols(IID, select_columns = 'Firm.Type')
+IID.Dat[1:3,]
+f<-lm(Y~X1+Firm.Type_Stock,data=IID.Dat)
+summary(f)
+```
+
+
+```{R}
+f<-lm(Y~X1+factor(Firm.Type),data=IID)
+summary(f)
+```
+
+
+```{R}
+IID$X.Stock=I(IID$Firm.Type=="Stock")*1
+IID$X.Stock
+#alternatively
+IID$X.Mutual=I(IID$Firm.Type=="Mutual")*1
+IID$X.Mutual
+
+f<-lm(Y~X1+X.Stock,data=IID)
+summary(f)
+
+# Create side-by-side boxplots
+boxplot(IID$Y ~ IID$Firm.Type,
+        col = c("skyblue", "lightgreen"),
+        main = "Side-by-Side Boxplots",
+        xlab = "Firm Type",
+        ylab = "Revenue")
+
+```
+
+
+```{R}
+Y=IID$Y
+X1<-IID$X1
+X2<-IID$X2
+cX2<-as.factor(IID$X2)  
+fit<-lm(Y~X1 +cX2)
+coef <- coefficients(fit)
+plot( Y ~ X1, pch=(15+X2),col = as.character(2+X2))  
+abline(coef["(Intercept)"] + coef["cX21"], coef["X1"], col = 3)
+abline(coef["(Intercept)"] , coef["X1"], col = 2)
+legend(35,10,c("Stock firm","Mutual firm"),col=c(3,2), lwd=1,lty=c(1,1), pch=c(16,15))
+```
+
+
+```{R}
+contr.treatment(2)
+IID$Firm.Type.f<-factor(IID$Firm.Type)
+contrasts(IID$Firm.Type.f) = contr.treatment(2)
+f<-lm(Y~X1+Firm.Type.f,data=IID)
+summary(f)
+```
+
+
+```{R}
+#1st way interaction term
+f<-lm(Y~X1+X2+X1*X2,data=IID)
+summary(f)
+
+#2nd way interaction term
+f<-lm(Y~X1+X2+X1:X2,data=IID)
+summary(f)
+
+#3rd way interaction term
+IID$X3=IID$X1*IID$X2
+f<-lm(Y~X1+X2+X3,data=IID)
+summary(f)
+
+#4th way
+f1<-lm(Y~.^2,data=IID[,1:3])
+summary(f1)
+```
+
+
+```{R}
+DwaineStudio <- read.csv("../Modules/Week 4//DwaineStudio.csv")
+round(cor(DwaineStudio),2)
+plot(DwaineStudio)
+summary(DwaineStudio)
+f.dw<-lm(Y~X1+X2,data=DwaineStudio )
+summary(f.dw)
+par(mfrow=c(2,2))
+plot(f)
+anova(f.dw)
+```
+
+
+```{R}
+library(MASS)
+par(mfrow=c(1,1))
+boxcox(f.dw,lambda=seq(-5,5,by=.1))
+#getting the value of lambda
+b=boxcox(f.dw,lambda=seq(-5,5,by=.1))
+lambda<-b$x[which.max(b$y)]
+lambda
+#doing the log transformation
+f1.dw<-lm(log(Y)~X1+X2,data=DwaineStudio )
+summary(f1.dw)
+
+#checking visually reg model assumptions
+par(mfrow=c(2,2))
+plot(f1.dw)
+```
+
+
+```{R}
+shapiro.test(f1.dw$residuals)
+```
+
+
+```{R}
+pop.dw<-data.frame(cbind(DwaineStudio$Y,DwaineStudio$X1, DwaineStudio$X2,ei=f1.dw$residuals))
+library(car)
+#Create the group variable based on medium X1 value (Low Xs =0 vs High Xs =1)
+group=I(pop.dw[,2]< median(DwaineStudio$X1))*1
+#using built in function by inputting errors ei=pop.dw[,4] and group variable as inputs
+leveneTest(pop.dw[,4], group, center=median)
+```
+
+
+```{R}
+library(lmtest)
+bptest(log(Y)~X1+X2,data=DwaineStudio)
+```
+
+
+```{R}
+#model without X2
+f2.dw<-lm(log(Y)~X1,data=DwaineStudio)
+summary(f2.dw)
+anova(f2.dw,f1.dw)
+```
+
+
+### ../Modules/Week 5/CSCI_E_106_Assignment_5_solutions.Rmd
+
+```{R}
+PMQ1<- read.csv("../Modules/Week 5/../../Assignments/6/CDI Data.csv")
+# Development Data
+Y<-PMQ1$Number.of.active.physicians
+X1<-PMQ1$Total.population
+X2<-PMQ1$Total.personal.income
+X3<-PMQ1$Land.area
+X4<-PMQ1$Geographic.region
+
+data<-cbind(Y,X1,X2,X3,X4)
+data<-data.frame(data)
+
+```
+
+
+```{R}
+# Check X4 Levels, need 3 dummies, we decided to drop the level with less
+table(X4)
+data$X4.1=I(data$X4==1)*1
+data$X4.2=I(data$X4==2)*1
+data$X4.3=I(data$X4==3)*1
+# Drop un-necessary column
+data <- data %>% select(-c(X4))
+```
+
+
+```{R}
+model <- lm(Y ~ ., data = data)
+summary(model)
+summary(model)
+```
+
+
+```{R}
+model_reduced <- lm(Y ~ X1+X2+X3, data = data)
+a<-anova(model_reduced,model)
+a
+F_GLM<-anova(model_reduced,model)[2,5]
+F_GLM
+```
+
+
+```{R}
+library(lmtest)
+par(mfrow=c(1,2))
+plot(model, which=1)
+## Confirm using bptest() R function:
+bptest(model, studentize = FALSE)# We have a relatively large number of observations n>100, so we selected FALSE option which assumes normality, in case you have smaller than that use TRUE here.
+```
+
+
+```{R}
+library(olsrr)
+
+ols_plot_resid_lev(model)
+# Calculate Cook's distance
+cooks_dist <- cooks.distance(model)
+
+# Identify observations identified in the OLS PLOT RESID LEV graph
+large_leverage_points <- which(cooks_dist > 3 / n)  # You can adjust the threshold (e.g., 3/n) to match the outlier and leverage diagnosis graph results
+
+# Print the indices of observations above the desired threshold on the Cook's distance
+print(large_leverage_points)
+```
+
+
+```{R}
+plot(model,which=3)
+
+# Identify observations identified in the OLS PLOT RESID LEV graph as outliers
+outlier_points <- which(cooks_dist > 3 / n)  # You can adjust the threshold (e.g., 3/n) to match the outlier count in the leverage diagnosis graph
+
+# Print the indices of observations above the desired threshold on the Cook's distance
+print(outlier_points)
+
+```
+
+
+```{R}
+# Use a visual
+
+library(car)
+influencePlot(model, id="noteworthy", main="Influence Plot",
+              sub="Circle size is proportional to Cook's distance")
+#Compute Bonferroni Critical Value is 4.199773
+p=3
+Bonferroni_Critical_Value<-abs(qt(.05/(n*p),n-p-1))
+
+#are there of them bad outliers? 
+outlier_test <- outlierTest(model)
+
+knitr::kable(cbind(abs(outlier_test$rstudent),"<",Bonferroni_Critical_Value), align = "c",
+caption = "Largest Outlier vs. Bonferroni Critical Value")
+
+#Since Abs(-3.124428) is lower than 3.832128, we conclude that point West Virginia or Utah (2.52) are influential outliers, please note that Bonferroni applies an extra conservative approach.
+outlier_test
+```
+
+
+```{R}
+library(faraway)
+data("prostate" ,package="faraway")
+```
+
+
+```{R}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/prostate.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(prostate)
+```
+
+
+```{R}
+library(faraway)
+library(caret)
+# Split the data into training and testing samples
+set.seed(1023) 
+#Are we modeling a stationary variable (distributed with constant mean and variance) or a stochastic, response seem to include negative values (matters for Box Cox transformation) 
+ggdensity(prostate$lpsa,
+title = "Density Plot",
+xlab = "Y") +
+theme(plot.title = element_text(hjust = 0.5))
+#split the data into two parts 70-30 split
+DataSplit<-createDataPartition(y = prostate$lpsa, p = 0.69, list = FALSE)
+#creating the train and test data set
+prostate.train<-prostate[DataSplit,]
+prostate.test<-prostate[-DataSplit,]
+# always check if you have 70% 
+num_observations <- nrow(prostate)
+num_observations_train <- nrow(prostate.train)
+size_test <- (num_observations_train / num_observations)*100
+
+# we conclude 71% is sufficiently close to 70%, note the R-Developer may have considered other objectives for his createDataPartition like keep a balance sample in the sense of positive or negative.
+model <- lm(lpsa  ~ ., data = prostate.train)
+summary(model)
+summary(model)
+
+plot(model, which=1)
+car::qqPlot(model, main = "QQ Plot")
+print(paste("Percentage in Train: ",size_test))
+summary(model)
+```
+
+
+```{R}
+par(mfrow=c(2,2))
+plot(model)
+summary(model)
+# Prepare a scatter plot of the data
+summary(model)
+```
+
+
+```{R}
+library(caret)
+PredictedTrain<-predict(model,prostate.train)
+ModelTrain<-data.frame(obs = prostate.train$lpsa, pred=PredictedTrain)
+Model_Train=defaultSummary(ModelTrain)
+
+PredictedTest<-predict(model,prostate.test)
+ModelTest<-data.frame(obs = prostate.test$lpsa, pred=PredictedTest)
+Model_Test=defaultSummary(ModelTest)
+
+g = rbind(Model_Train,Model_Test)
+g
+```
+
+
+```{R}
+#We reject the null hypothesis as p.value is 0.6812 > 0.05 - so, we conclude that the error variances are constant. We have a relatively mall number of observations n<100, so we don't assumes normality,no need to select option in the bptest as the default is TRUE.
+library(lmtest)
+bptest(model)
+
+```
+
+
+```{R}
+# 1. Update to drop not significant variables
+model2<- lm(lpsa ~ ., data = prostate.train[,c(-3,-4,-5,-6,-7,-8)])
+summary(model2)
+# 2. Performance new model out of sample
+library(caret)
+PredictedTrain<-predict(model2,prostate.train)
+ModelTrain<-data.frame(obs = prostate.train$lpsa, pred=PredictedTrain)
+Model_Train=defaultSummary(ModelTrain)
+
+PredictedTest<-predict(model2,prostate.test)
+ModelTest<-data.frame(obs = prostate.test$lpsa, pred=PredictedTest)
+Model_Test=defaultSummary(ModelTest)
+
+g = rbind(Model_Train,Model_Test)
+g
+
+```
+
+
+```{R}
+d1<-read.csv("../Assignments/5/Commercial Properties Data Set.csv")
+#Scatter plot matrix
+library(ggplot2)
+#install.packages("GGally")
+library(GGally)
+# Identify strongly correlated variables with wage
+#install.packages("corrplot")
+library(corrplot)
+```
+
+
+```{R}
+options("scipen" = 12)  ##Used to avoid displaying numbers such as 1+e3 (exponent), changing the options
+f1<-lm(Y~X1+X2+X3+X4, data= d1)
+summary(f1)
+summary(f1)
+```
+
+
+```{R}
+library(car)
+car::qqPlot(f1, main = "QQ Plot")
+par(mfrow=c(2,2))
+plot(f1)
+
+```
+
+
+```{R}
+# ---- 1(e) Brown–Forsythe test exactly per spec ----
+library(car)
+
+# Residuals and fitted from the Problem 1 model
+r     <- residuals(f1)
+fhat  <- fitted(f1)
+
+# Group by the 40 smallest fitted values (group A) vs the rest (group B)
+ord <- order(fhat)
+grp <- rep("B_rest", length(fhat))
+grp[ord[1:40]] <- "A_small40"
+grp <- factor(grp, levels = c("A_small40", "B_rest"))
+
+# Brown–Forsythe test (Levene with center = "median") on residuals by group
+bf <- leveneTest(r ~ grp, center = "median")
+print(bf)
+```
+
+
+```{R}
+# Centering the variables
+x1g <- d1$X1 - mean(d1$X1)
+x2g <- d1$X2 - mean(d1$X2)
+x3g <- d1$X3 - mean(d1$X3)
+x4g <- d1$X4 - mean(d1$X4)
+
+# Full 2nd-order model (centered)
+model1 <- lm(
+  Y ~ x1g + x2g + x3g + x4g +
+      I(x1g^2) + I(x2g^2) + I(x3g^2) + I(x4g^2) +
+      x1g:x2g + x1g:x3g + x1g:x4g + x2g:x3g + x2g:x4g + x3g:x4g +
+      x1g:x2g:x3g + x1g:x2g:x4g + x2g:x3g:x4g + x1g:x3g:x4g +
+      x1g:x2g:x3g:x4g,
+  data = d1
+)
+
+summary(model1)
+summary(model1)
+```
+
+
+```{R}
+f1 <- update(model1, . ~ . - x1g:x2g:x3g)   # drop highest p
+summary(f1)
+f1 <- update(f1,    . ~ . - I(x1g^2))
+summary(f1)
+f1 <- update(f1,    . ~ . - I(x4g^2))
+summary(f1)
+f1 <- update(f1,    . ~ . - x2g:x3g:x4g)
+summary(f1)
+f1 <- update(f1,    . ~ . - x1g:x3g:x4g)
+summary(f1)
+f1 <- update(f1,    . ~ . - x2g:x3g)
+summary(f1)
+f1 <- update(f1,    . ~ . - I(x3g^2))
+summary(f1)
+f1 <- update(f1,    . ~ . - x3g:x4g)
+summary(f1)
+f1 <- update(f1,    . ~ . - x2g:x4g)
+summary(f1)
+f1 <- update(f1,    . ~ . - I(x2g^2))
+summary(f1)
+```
+
+
+```{R}
+# Final removal to ensure all remaining terms are significant at 5%
+model2 <- lm(Y ~ x1g + x2g + x3g + x4g +
+               x1g:x2g + x1g:x4g + x1g:x2g:x4g + x1g:x2g:x3g:x4g,
+             data = d1)
+summary(model2)
+summary(model2)
+
+# General Linear Test: reduced FIRST, full SECOND
+anova(model2, model1)
+```
+
+
+### ../Modules/Week 5/Cross Validation.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+library(caret)
+data(mtcars)
+str(mtcars)
+summary(mtcars)
+R<-round(cor(mtcars),2)
+R
+```
+
+
+```{R}
+DataSplit<-createDataPartition(y = mtcars$mpg, p = 0.7, list = FALSE)
+TrainData<-mtcars[DataSplit,]
+TestData<-mtcars[-DataSplit,]
+
+```
+
+
+```{R}
+LmFit1<-train(mpg~., data = TrainData, method = "lm")
+f<-lm(mpg~., data = TrainData)
+```
+
+
+```{R}
+summary(LmFit1)
+summary(f)
+```
+
+
+```{R}
+PredictedTest<-predict(LmFit1,TestData)
+```
+
+
+```{R}
+ModelTest1<-data.frame(obs = TestData$mpg, pred=PredictedTest)
+```
+
+
+```{R}
+defaultSummary(ModelTest1)
+```
+
+
+```{R}
+Control1<-trainControl(method = "cv",number = 10)
+LmFit2<-train(mpg ~ ., data = mtcars, method = "lm",trControl = Control1,metric="Rsquared")
+```
+
+
+```{R}
+summary(LmFit2)
+PredictedTest2<-predict(LmFit2,mtcars)
+ModelTest2<-data.frame(obs = mtcars$mpg, pred=PredictedTest2)
+defaultSummary(ModelTest2)
+```
+
+
+```{R}
+Control2<-trainControl(method="LOOCV")
+LmFit3<-train(mpg ~ ., data = mtcars, method = "lm", trControl = Control2)
+summary(LmFit3)
+```
+
+
+```{R}
+varImp(LmFit3)
+plot(varImp(LmFit3))
+```
+
+
+```{R}
+Control3<-trainControl(method="boot", number=100)
+LmFit4<-train(mpg ~ ., data = mtcars, method = "lm", trControl = Control3)
+summary(LmFit4)
+PredictedTest4<-predict(LmFit4,mtcars)
+ModelTest4<-data.frame(obs = mtcars$mpg, pred=PredictedTest4)
+defaultSummary(ModelTest4)
+```
+
+
+### ../Modules/Week 5/Polynomial Regression.Rmd
+
+### ../Modules/Week 6/CSCI_E_106Assignment_6_Solutions.Rmd
+
+```{R}
+library(faraway)
+data(divusa,package="faraway")
+#str(divusa)
+```
+
+
+```{R}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/divusa.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(divusa)
+```
+
+
+```{R}
+library(faraway)
+
+
+n<-dim(divusa)[1]
+# How the correlations look like? Perfectly Collinear data may be a problem to start
+Correlations<-round(cor(divusa),2) 
+# Identify strongly correlated variables with wage
+#install.packages("corrplot")
+library(corrplot)
+corrplot(Correlations, method = "color", col = colorRampPalette(c("blue", "white", "red"))(200), 
+         type = "upper", order = "hclust", 
+         addCoef.col = "black", # Add correlation coefficients
+         tl.col = "black", tl.srt = 45, # Text label color and rotation
+         diag = FALSE) # Hide the diagonal
+
+#No categorical variables levels
+#Are we modeling a stationary variable (distributed with constant mean and variance) or a stochastic process (e.g. a random walk)??#Is the data of the response variable stationary, what can we say with a graph? It actually looks bimodal.
+ggdensity(divusa$divorce, 
+          title = "Density Plot",
+          xlab = "Y") +
+          theme(plot.title = element_text(hjust = 0.5))
+#NAs present?
+colSums(is.na(divusa))
+#No NAs are present.
+
+# We conclude that potential problems among marriage, birth, female and year.
+```
+
+
+```{R}
+model <- lm(divorce ~ unemployed+femlab+marriage+birth+military, data = divusa)
+summary(model)
+summary(model)
+```
+
+
+```{R}
+library(MASS)
+#one needs to create the model matrix first
+vif(model)
+```
+
+
+```{R}
+library(faraway)
+modelc <- lm(divorce ~ femlab+marriage+birth, data = divusa)
+summary(modelc)
+summary(modelc)
+vif(modelc)
+```
+
+
+```{R}
+oldpar <- par(mfrow = c(1,2))
+plot(modelc)
+par(oldpar)
+```
+
+
+```{R}
+machine_speed_data <- read.csv("../Assignments/6/Machine Speed.csv")
+model <- lm(Y ~ X, data = machine_speed_data)
+summary(model)
+summary(model)
+# Obtain squared residuals from model object
+ei<-model$residuals
+squared.ei<-(ei)^2
+# Plot the squared residuals against the independent variable X
+plot(x = machine_speed_data$Y, y = squared.ei,
+     xlab = "Independent Variable (wt)",
+     ylab = "Squared Residuals",
+     main = "Squared Residuals vs. X")
+# Add a horizontal line at y=0 (though all values will be >= 0) or a loess smooth line
+# abline(h = 0, col = "red", lty = 2) 
+lines(lowess(machine_speed_data$Y, squared.ei), col = "blue", lwd = 2)
+
+par(oldpar)
+```
+
+
+```{R}
+#We can not reject the null hypothesis at 10% confidence level, as p.value is 0.0663 which is smaller than 0.10 - so, conclude that the error variances are  constant. We use the default version of the test that takes into account studentized residuals which is recommended given the small sample size.
+library(lmtest)
+bptest(model)
+```
+
+
+```{R}
+# We follow the method covered during the class
+# Step 1st Iteration
+ei<-model$residuals
+abs.ei<-abs(ei)
+g1<-lm(abs.ei~machine_speed_data$X)
+summary(g1)
+# Step 2 Derive the weights
+s<-g1$fitted.values
+wi=1/(s^2)
+
+print(wi)
+
+```
+
+
+```{R}
+g2<-lm(Y~X,weights= wi, data=machine_speed_data)
+summary(g2)
+par(mfrow=c(2,2))
+plot(g2)
+library(lmtest)
+bptest(g2)
+summary(g2)
+```
+
+
+```{R}
+#got coefficients first regression
+a = summary(model)$coefficients[1,1]
+a
+b = summary(model)$coefficients[2,1]
+b
+#got coefficients second regression
+a2 = summary(g2)$coefficients[1,1]
+a2
+b2 = summary(g2)$coefficients[2,1]
+b2
+# Side-by-side display
+# Create the data frame
+results_table <- data.frame(
+  Coefficient = c("Intercept", "Slope"),
+  Model_1 = c(a, b),
+  Model_2 = c(a2, b2)
+)
+
+print(results_table)
+
+```
+
+
+```{R}
+#got std of the coefficients first regression
+sa = summary(model)$coefficients[2,1]
+sa
+sb = summary(model)$coefficients[2,2]
+sb
+#got std of coefficients second regression
+sa2 = summary(g2)$coefficients[2,1]
+sa2
+sb2 = summary(g2)$coefficients[2,2]
+sb2
+# Side-by-side display
+# Create the data frame
+results_table <- data.frame(
+  Coefficient = c("Intercept Std", "Slope Std"),
+  Model_1 = c(sa, sb),
+  Model_2 = c(sa2, sb2)
+)
+
+print(results_table)
+
+```
+
+
+```{R}
+#2nd iteration - one more iteration
+ei<-g2$residuals
+abs.ei<-abs(ei)
+g3<-lm(abs.ei~machine_speed_data$X)
+summary(g3)
+s<-g3$fitted.values
+wi=1/(s^2)
+
+print(wi)
+g4<-lm(Y~X,weights= wi, data=machine_speed_data)
+summary(g4)
+summary(g4)
+plot(g4)
+```
+
+
+```{R}
+PMQ1<- read.csv("../Assignments/6/CDI Data.csv")
+# Development Data, all variables less Identification Number, County, and State.
+Y<-PMQ1$Number.of.active.physicians
+X1<-PMQ1$Land.area
+X2<-PMQ1$Total.population
+X3<-PMQ1$Percent.of.population.aged.18.34
+X4<-PMQ1$Percent.of.population.65.or.older
+X5<-PMQ1$Number.of.hospital.beds
+X6<-PMQ1$Total.serious.crimes
+X7<-PMQ1$Percent.high.school.graduates
+X8<-PMQ1$Percent.bachelor.s.degrees
+X9<-PMQ1$Percent.below.poverty.level
+X10<-PMQ1$Percent.unemployment
+X11<-PMQ1$Per.capita.income
+X12<-PMQ1$Total.personal.income
+X13<-PMQ1$Geographic.region
+
+data<-cbind(Y,X1,X2,X3,X4,X5,X6,X7,X8,X9,X10,X11,X12,X13)
+data<-data.frame(data)
+# Check X13 Levels, need 3 dummies, we decided to drop the level with less
+table(X13)
+data$X13.1=I(data$X13==1)*1
+data$X13.2=I(data$X13==2)*1
+data$X13.3=I(data$X13==3)*1
+# Drop un-necessary column
+data <- data %>% select(-c(X13))
+
+data<-data.frame(data)
+
+```
+
+
+```{R}
+lmod <- lm(Y~.,data=data)
+
+library(olsrr)
+# Forward-Backward Stepwise Regression by p-value
+bothlm = ols_step_both_p(lmod, pent=0.05, prem=0.05)
+summary(bothlm$model)
+# We note we still have one non-significant variable, remember R comes without any guarantee, one need to check, we drop X6
+lmod2<-lm(Y~X2+X5+X7+X8+X11+X12+X13.1+X13.2+X13.3,data=data)
+summary(lmod2)
+plot(lmod2)
+######
+X13.1<-data$X13.1
+X13.2<-data$X13.2
+X13.3<-data$X13.3
+data2<-cbind(Y,X2,X5,X7,X8,X11,X12,X13.1,X13.2,X13.3)
+data2<-data.frame(data2)
+summary(lmod2)
+```
+
+
+```{R}
+cv5_linear_caret <- function(
+  data,
+  response,            # character: name of response variable (numeric)
+  predictor,           # character: name of predictor variable
+  seed = 1023,         # fixed seed for reproducibility
+  fit_fun = NULL,      # optional: custom fit function for "selected model in part (a)"
+  ...
+) {
+  # Dependencies
+  if (!requireNamespace("caret", quietly = TRUE)) {
+    stop("Package 'caret' is required. Please install it: install.packages('caret')")
+  }
+  
+  # Basic checks
+  stopifnot(is.data.frame(data))
+  if (!all(c(response, predictor) %in% names(data))) {
+    stop("response/predictor must be columns in 'data'.")
+  }
+  if (!is.numeric(data[[response]])) {
+    stop("The response variable must be numeric for caret::defaultSummary (regression).")
+  }
+  if (nrow(data) != 440) {
+    warning(sprintf("Data has %d rows; proceeding anyway but function was designed for 440.", nrow(data)))
+  }
+  
+  # Build the model formula
+  form <- as.formula(paste(response, "~", predictor))
+  
+  # Model is linear regression (lm)
+  if (is.null(fit_fun)) {
+    fit_fun <- function(formula, dat, ...) stats::lm(formula, data = dat, ...)
+  }
+  
+  # Create 5 equal folds of 88 each using a fixed seed
+  set.seed(seed)
+  n <- nrow(data)
+  k <- 5
+  if (n %% k != 0) stop("nrow(data) must be divisible by 5 to guarantee equal fold sizes.")
+  
+  # Random permutation + exact equal fold assignment
+  idx <- sample(n)                         # random permutation
+  fold_id <- rep(1:k, each = n / k)        # 1..5, exactly 88 each for n=440
+  fold_id <- fold_id[order(idx)]           # map to original row order
+  folds <- split(seq_len(n), fold_id)      # list of test indices per fold
+  
+  # Storage for metrics
+  train_metrics <- vector("list", k)
+  test_metrics  <- vector("list", k)
+  models        <- vector("list", k)
+  
+  # Cross-validation loop
+  for (i in seq_len(k)) {
+    test_idx  <- folds[[i]]
+    train_idx <- setdiff(seq_len(n), test_idx)
+    
+    data.train <- data[train_idx, , drop = FALSE]
+    data.test  <- data[test_idx,  , drop = FALSE]
+    
+    # Fit your selected model from part (a); default: lm
+    model <- fit_fun(form, data.train, ...)
+    models[[i]] <- model
+    
+    # ---- Training metrics (caret::defaultSummary) ----
+    PredictedTrain <- predict(model, newdata = data.train)
+    ModelTrain <- data.frame(
+      obs  = data.train[[response]],
+      pred = PredictedTrain
+    )
+    Model_Train <- caret::defaultSummary(ModelTrain)  # RMSE, Rsquared, MAE
+    train_metrics[[i]] <- as.data.frame(as.list(Model_Train))
+    train_metrics[[i]]$Fold <- i
+    
+    # ---- Testing metrics (caret::defaultSummary) ----
+    PredictedTest <- predict(model, newdata = data.test)
+    ModelTest <- data.frame(
+      obs  = data.test[[response]],
+      pred = PredictedTest
+    )
+    Model_Test <- caret::defaultSummary(ModelTest)    # RMSE, Rsquared, MAE
+    test_metrics[[i]] <- as.data.frame(as.list(Model_Test))
+    test_metrics[[i]]$Fold <- i
+  }
+  
+  # Bind per-fold metrics
+  train_df <- do.call(rbind, train_metrics)[, c("Fold", "RMSE", "Rsquared", "MAE")]
+  test_df  <- do.call(rbind,  test_metrics)[,  c("Fold", "RMSE", "Rsquared", "MAE")]
+  
+  # Summaries: mean and sd across folds
+  summarize_metrics <- function(df) {
+    data.frame(
+      Metric = c("RMSE", "Rsquared", "MAE"),
+      Mean   = c(mean(df$RMSE), mean(df$Rsquared), mean(df$MAE)),
+      SD     = c(sd(df$RMSE),   sd(df$Rsquared),   sd(df$MAE))
+    )
+  }
+  summary_train <- summarize_metrics(train_df)
+  summary_test  <- summarize_metrics(test_df)
+  
+  # Return a structured result
+  list(
+    call = match.call(),
+    formula = form,
+    seed = seed,
+    fold_sizes = sapply(folds, length),
+    folds = folds,                       # test indices per fold
+    per_fold_train = train_df,           # RMSE/R2/MAE by fold (train)
+    per_fold_test  = test_df,            # RMSE/R2/MAE by fold (test)
+    summary_train = summary_train,       # Means and SDs (train)
+    summary_test  = summary_test,        # Means and SDs (test)
+    models = models                      
+  )
+}
+
+```
+
+
+```{R}
+set.seed(1023)  
+cv_out <- cv5_linear_caret(
+  data = data2,
+  response = "Y",
+  predictor = c("X2","X5","X7","X8","X11","X12","X13.1","X13.2","X13.3")
+)
+# Inspect fold sizes (should be all 88)
+cv_out$fold_sizes
+# Per-fold metrics (training and testing)
+cv_out$per_fold_train
+cv_out$per_fold_test
+# Summaries across folds
+cv_out$summary_train
+cv_out$summary_test
+
+```
+
+
+### ../Modules/Week 6/CSCI E-106 Fall 2025 Midterm Exam Solutions.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(pander)
+library(rmarkdown)
+library(markdown)
+library(MASS)
+library(faraway)
+library(glmnet)
+library(lmtest)
+library(olsrr)
+library(leaps)
+library(caret)
+library('fastDummies')
+library(glmnet)
+options("scipen" = 10)
+```
+
+
+```{R}
+library(ISLR2);data("Hitters")
+
+#adding the dummy variables
+Hitters$League_1<- I(Hitters$League=="A")*1
+Hitters$Division_1<- I(Hitters$Division=="E")*1
+Hitters$NewLeague_1<- I(Hitters$NewLeague=="A")*1
+
+#dropping the categorical variables
+Hitters1<-na.omit(Hitters[,-c(14,15,20)])
+round(cor(Hitters1),2)
+boxplot(Hitters1$Salary)
+```
+
+
+```{R}
+set.seed(1299)
+
+n1=nrow(Hitters1)
+q1_sample <- sample(n1, 0.7*n1)
+
+q1_train_data <- Hitters1[q1_sample, ]
+q1_test_data  <- Hitters1[-q1_sample, ]
+```
+
+
+```{R}
+f1<-lm(Salary~.,data=q1_train_data)
+summary(f1)
+vif(f1)
+anova(f1)
+
+par(mfrow=c(2,2))
+plot(f1)
+
+ols_test_breusch_pagan(f1)
+vif(f1)
+#performance on train
+
+PredictedTest<-predict(f1,q1_train_data)
+ModelTest1<-data.frame(obs = q1_train_data$Salary, pred=PredictedTest)
+reg.full.train<-defaultSummary(ModelTest1)
+reg.full.train
+
+```
+
+
+```{R}
+k1<-ols_step_both_p(f1, p_remove =0.05,details=FALSE)
+k1$model
+
+f2<-lm(Salary~ CRuns+Walks+Division_1+PutOuts+CWalks,data=q1_train_data)
+summary(f2)
+par(mfrow=c(2,2))
+plot(f2)
+
+ols_test_breusch_pagan(f2)
+vif(f2)
+#performance on train data set
+
+PredictedTest<-predict(f2,q1_train_data)
+ModelTrain<-data.frame(obs = q1_train_data$Salary, pred=PredictedTest)
+reg.train<-defaultSummary(ModelTrain)
+reg.train
+```
+
+
+```{R}
+x <- model.matrix(Salary~.,q1_train_data)[,-c(1)]
+#our dependent variable
+y <- q1_train_data$Salary
+LassoMod <- glmnet(x, y, alpha=1, nlambda=100,lambda.min.ratio=0.0001)
+CvLassoMod <- cv.glmnet(x, y, alpha=1, nlambda=100,lambda.min.ratio=0.0001)
+best.lambda.lasso <- CvLassoMod$lambda.min
+best.lambda.lasso
+coef(CvLassoMod, s = "lambda.min")
+
+## Lasso Regression Model
+y_hat.lasso <- predict(LassoMod, s = best.lambda.lasso, newx = x)
+Predicted<-c(y_hat.lasso)
+ModelTrain.lasso<-data.frame(obs = q1_train_data$Salary, pred=Predicted)
+lasso.train<-defaultSummary(ModelTrain.lasso)
+lasso.train
+```
+
+
+```{R}
+rr.huber <- rlm(Salary~ CRuns+Walks+Division_1+PutOuts+CWalks, data = q1_train_data)
+cbind(f2$coefficients,rr.huber$coefficients)
+#performance on train data set
+
+PredictedTest<-predict(rr.huber,data=q1_train_data)
+ModelTrain.R<-data.frame(obs = q1_train_data$Salary, pred=PredictedTest)
+huber.train.R<-defaultSummary(ModelTrain.R)
+huber.train.R
+```
+
+
+```{R}
+#OLS Reg model
+PredictedTest<-predict(f2,q1_test_data)
+ModelTest1<-data.frame(obs = q1_test_data$Salary, pred=PredictedTest)
+reg.test<-defaultSummary(ModelTest1)
+
+#Lasso model
+x.t <- model.matrix(Salary~.,q1_test_data)[,-c(1)]
+y_hat.lasso <- predict(LassoMod, s = best.lambda.lasso, newx = x.t)
+Predicted<-c(y_hat.lasso)
+ModelTest.lasso<-data.frame(obs = q1_test_data$Salary, pred=Predicted)
+lasso.test<-defaultSummary(ModelTest.lasso)
+
+#Robust Regression
+
+PredictedTest<-predict(rr.huber,newdata=q1_test_data)
+ModelTest<-data.frame(obs = q1_test_data$Salary, pred=PredictedTest)
+huber.test<-defaultSummary(ModelTest)
+
+
+data.frame(rbind(reg.test,lasso.test,huber.test))
+```
+
+
+```{R}
+par(mfrow=c(1,1))
+boxcox(f1,lambda=seq(-2,2,by=.1))
+#actual value lambda
+a=boxcox(f1,lambda=seq(-2,2,by=.1))
+lamda=a$x[which.max(a$y)]
+lamda
+
+f3<-lm(log(Salary)~ .,data=q1_train_data)
+summary(f3)
+anova(f3)
+par(mfrow=c(2,2))
+plot(f3)
+ols_test_breusch_pagan(f3)
+vif(f3)
+```
+
+
+```{R}
+#Train Data
+PredictedTrain<-exp(predict(f3,q1_train_data))
+ModelTrain<-data.frame(obs = q1_train_data$Salary, pred=PredictedTrain)
+reg.train<-defaultSummary(ModelTrain)
+
+#Test Data
+PredictedTest<-exp(predict(f3,newdata=q1_test_data))
+ModelTest<-data.frame(obs = q1_test_data$Salary, pred=PredictedTest)
+reg.test<-defaultSummary(ModelTest)
+data.frame(rbind(reg.train,reg.test))
+```
+
+
+### ../Modules/Week 6/CSCI E-106 Fall 2025 Midterm Exam.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### ../Modules/Week 6/R Codes Model Section and Cross Validation/Variable Selection.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+library(olsrr)
+library(datasets)
+
+f <- lm(mpg ~., data = mtcars)
+summary(f)
+#cyl has the highest p value of 0.9161
+f1<-update(f,.~.- cyl)
+summary(f1)
+#vs has the highest p value of 0.8433
+f1<-update(f1,.~.- vs)
+summary(f1)
+#carb has the highest p value of  0.7470
+f1<-update(f1,.~.- carb)
+summary(f1)
+#gear has the highest p value of  0.61964
+f1<-update(f1,.~.- gear)
+summary(f1)
+#drat has the highest p value of  0.46240
+f1<-update(f1,.~.- drat)
+summary(f1)
+#disp has the highest p value of  0.29897 
+f1<-update(f1,.~.- disp)
+summary(f1)
+#hp has the highest p value of  0.22309 
+f1<-update(f1,.~.- hp)
+summary(f1)
+```
+
+
+```{R}
+library(olsrr)
+library(datasets)
+exp <- lm(mpg ~wt+ qsec+ am, data = mtcars)
+k <- ols_step_all_possible(exp)
+k
+plot(k)
+#lets get the best model for each subset
+exp1 <- lm(mpg ~., data = mtcars)
+k1<-ols_step_best_subset(exp1)
+k1
+plot(k1)
+```
+
+
+```{R}
+# stepwise forward regression
+exp2 <- lm(y ~ ., data = surgical)
+k2<-ols_step_forward_p(exp2)
+plot(k2)
+# stepwise forward regression
+ols_step_forward_p(exp2, details = TRUE)
+```
+
+
+```{R}
+# stepwise backward regression
+k4<-ols_step_backward_p(exp2)
+k4
+plot(k4)
+#get the model
+k4$model
+formula(k4$model)
+#Detailed Output
+# stepwise backward regression
+ols_step_backward_p(exp2, details = TRUE)
+```
+
+
+```{R}
+# stepwise regression
+
+k5<-ols_step_both_p(exp2)
+k5
+plot(k5)
+formula(k5$model)
+#ensuring that all variables are significant at 95% level
+k5.1<-ols_step_both_p(exp2,p_enter=0.1,p_remove=0.05,details=TRUE)
+k5.1
+formula(k5.1$model)
+#Detailed Output
+ols_step_both_p(exp2, details = TRUE)
+```
+
+
+```{R}
+# stepwise aic forward regression
+k6<-ols_step_forward_aic(exp2)
+k6
+plot(k6)
+ols_step_forward_aic(exp2, details = TRUE)
+```
+
+
+```{R}
+k7 <- ols_step_backward_aic(exp2)
+k7
+plot(k7)
+ols_step_backward_aic(exp2, details = TRUE)
+```
+
+
+```{R}
+k8<-ols_step_both_aic(exp2)
+k8
+plot(k8)
+ols_step_both_aic(exp2, details = TRUE)
+```
+
+
+```{R}
+data(state)
+state.x77[1:10,]
+state<-data.frame(state.x77)
+require(leaps)
+b<-regsubsets(Life.Exp~.,data=state)
+rs<-summary(b)
+rs$which
+
+AIC<-50*log(rs$rss/50)+(2:8)*2
+plot(AIC~I(1:7),ylab="AIC",xlab="Number of Predictors")
+
+plot(2:8,rs$adjr2,xlab="Number of Predictors",ylab="Adjusted R Square")
+which.max(rs$adjr2)
+
+
+plot(2:8,rs$cp,xlab="Number of Predictors",ylab="Cp")
+abline(0,1)
+
+st1<-lm(Life.Exp~.,data=state)
+res1<-ols_step_best_subset(st1)
+res1
+plot(res1)
+```
+
+
+### ../Modules/Week 6/R Codes Model Section and Cross Validation/Cross Validation.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+library(caret)
+data(mtcars)
+str(mtcars)
+summary(mtcars)
+R<-round(cor(mtcars),2)
+R
+```
+
+
+```{R}
+DataSplit<-createDataPartition(y = mtcars$mpg, p = 0.7, list = FALSE)
+TrainData<-mtcars[DataSplit,]
+TestData<-mtcars[-DataSplit,]
+
+```
+
+
+```{R}
+LmFit1<-train(mpg~., data = TrainData, method = "lm")
+f<-lm(mpg~., data = TrainData)
+```
+
+
+```{R}
+summary(LmFit1)
+summary(f)
+```
+
+
+```{R}
+PredictedTest<-predict(LmFit1,TestData)
+```
+
+
+```{R}
+ModelTest1<-data.frame(obs = TestData$mpg, pred=PredictedTest)
+```
+
+
+```{R}
+defaultSummary(ModelTest1)
+```
+
+
+```{R}
+Control1<-trainControl(method = "cv",number = 10)
+LmFit2<-train(mpg ~ ., data = mtcars, method = "lm",trControl = Control1,metric="Rsquared")
+```
+
+
+```{R}
+summary(LmFit2)
+PredictedTest2<-predict(LmFit2,mtcars)
+ModelTest2<-data.frame(obs = mtcars$mpg, pred=PredictedTest2)
+defaultSummary(ModelTest2)
+```
+
+
+```{R}
+Control2<-trainControl(method="LOOCV")
+LmFit3<-train(mpg ~ ., data = mtcars, method = "lm", trControl = Control2)
+summary(LmFit3)
+```
+
+
+```{R}
+varImp(LmFit3)
+plot(varImp(LmFit3))
+```
+
+
+```{R}
+Control3<-trainControl(method="boot", number=100)
+LmFit4<-train(mpg ~ ., data = mtcars, method = "lm", trControl = Control3)
+summary(LmFit4)
+PredictedTest4<-predict(LmFit4,mtcars)
+ModelTest4<-data.frame(obs = mtcars$mpg, pred=PredictedTest4)
+defaultSummary(ModelTest4)
+```
+
+
+### ../Modules/Week 7/CSCI E-106 Assignment 7_solutions.Rmd
+
+```{R}
+library(faraway)
+data(fat,package="faraway")
+#str(fat)
+```
+
+
+```{R}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/fat.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(fat)
+```
+
+
+```{R}
+#load data
+head(fat) #need to exclude brozek and density, that is [, -c(1,3)]
+fat=fat[, -c(1,3)]
+head(fat) #verify that brozek and density are not there
+summary(fat) 
+#check for missing and NAs
+apply(fat ,2,function(x) sum(is.na(x)))
+#Are there any candidate for dummies?
+### No
+```
+
+
+```{R}
+Correlations<-round(cor(fat),1)
+Correlations
+#Findings
+#several high correlated predictors (above 0.6): hip and weight, and weight against neck, chest, abdom, hip or thigh
+
+```
+
+
+```{R}
+#randomizing and partitioning the data
+ #in order to get same partitioning every time
+n <- dim(fat)[1]
+set.seed(1023)
+ind <- sample(1:n, n*0.7)
+data_train <- data.frame(fat[ind, ])
+data_test <- data.frame(fat[-ind, ])
+#always check the dimensions in each dataset (error checking) 
+dim(fat)
+dim(data_train)
+dim(data_test) 
+176/252  #
+```
+
+
+```{R}
+lmod <- lm(siri~.,data=data_train)
+summary(lmod)
+summary(lmod)
+```
+
+
+```{R}
+library(olsrr)
+# Forward-Backward Stepwise Regression by p-value
+bothlm = ols_step_both_p(lmod, pent=0.05, prem=0.05)
+summary(bothlm$model)
+# wrist is not signiificative so we drop it from the final selection
+bothlmod <-lm(siri~free+weight+forearm+height+chest+thigh+age+adipos,data=data_train)
+summary(bothlmod)
+summary(bothlmod)
+par(mfrow=c(2,2))
+plot(bothlmod)
+
+```
+
+
+```{R}
+library(glmnet)
+#need to define X and Y matrix for glmnet
+#take out Y and law indicator from data for X (all independent variable)
+x <- model.matrix(siri~.,data=data_train)[,-c(1)]
+y <- data_train$siri
+RidgeMod <- glmnet(x, y, alpha=0, nlambda=100,lambda.min.ratio=0.0001)
+```
+
+
+```{R}
+library(glmnet)
+CvRidgeMod <- cv.glmnet(x, y, alpha=0, nlambda=100,lambda.min.ratio=0.0001)
+par(mfrow=c(1,1))
+plot(CvRidgeMod)
+best.lambda.ridge <- CvRidgeMod$lambda.min
+best.lambda.ridge 
+```
+
+
+```{R}
+predict(RidgeMod, s=best.lambda.ridge, type="coefficients")[1:4, ]
+
+
+```
+
+
+```{R}
+set.seed(1023)   #set seed here to ensure replicability of the results
+library(glmnet)
+x <- model.matrix(siri~.,data=data_train)[,-c(1)]
+y <- data_train$siri
+LassoMod <- glmnet(x, y, alpha=1, nlambda=100,lambda.min.ratio=0.0001)
+plot(LassoMod,xvar="norm",label=TRUE)
+CvLassoModel <- cv.glmnet(x, y, alpha=1, nlambda=100,lambda.min.ratio=0.0001)
+plot(CvLassoModel)
+best.lambda.lasso <- CvLassoModel$lambda.min
+best.lambda.lasso
+coef(CvLassoModel, s = "lambda.min")
+```
+
+
+```{R}
+set.seed(1023)   #set seed here to ensure replicability of the results
+EnetMod <- glmnet(x, y, alpha=0.5, nlambda=100,lambda.min.ratio=0.0001)
+CvElasticnetMod <- cv.glmnet(x, y,alpha=0.5,nlambda=100,lambda.min.ratio=0.0001)
+best.lambda.enet <- CvElasticnetMod$lambda.min
+best.lambda.enet
+coefficients(EnetMod,s=best.lambda.enet)
+#coef(CvElasticnetMod, s = "lambda.min")
+```
+
+
+```{R}
+library(caret)
+#performance of the model on the Test Data
+#getting the predicted values for the test data linear model
+PredictedTest<-predict(lmod, data_test)
+ModelTest<-data.frame(obs = data_test$siri, pred=PredictedTest)
+#getting the predicted values for the test data both ways model selection 
+PredictedTest2<-predict(bothlmod, data_test)
+ModelTest2<-data.frame(obs = data_test$siri, pred=PredictedTest2)
+#getting the predicted values for the test data Ridge model 
+newx<-model.matrix(siri~., data_test)[,-c(1)]
+PredictedTest3 <- predict(CvRidgeMod, s = best.lambda.ridge, newx = newx)
+ModelTest3<-data.frame(obs = data_test$siri, pred=PredictedTest3)
+# need a little trick here
+colnames(ModelTest3)[2]="pred"
+#getting the predicted values for the test data Lasso model
+PredictedTest4 <- predict(CvLassoModel, s = best.lambda.lasso,newx = newx)
+ModelTest4<-data.frame(obs = data_test$siri, pred=PredictedTest4)
+colnames(ModelTest4)[2]="pred"
+#getting the predicted values for the test data Elastic net model
+PredictedTest5 <- predict(CvElasticnetMod, s = best.lambda.enet,newx = newx)
+ModelTest5<-data.frame(obs = data_test$siri, pred=PredictedTest5)
+colnames(ModelTest5)[2]="pred"
+
+#comparing the model performance metrics in a small report
+
+out<-rbind(defaultSummary(ModelTest),defaultSummary(ModelTest2),defaultSummary(ModelTest3),defaultSummary(ModelTest4),defaultSummary(ModelTest5))
+dimnames(out)[[1]]<-c("Linear","Both Ways S", "Ridge","Lasso","Elastic")
+out
+```
+
+
+```{R}
+#randomizing and partitioning the data
+head(fat) #verify that brozek and density are not there so we can use the problem 1 training and test data
+```
+
+
+```{R}
+set.seed(1023)  #to ensure replicability of the results
+library(MASS)
+lmod2<-lm(siri~., psi = psi.huber, data=data_train)  # same model as before
+rr.huber2 <- rlm(siri~., psi = psi.huber, data=data_train)
+summary(rr.huber2)
+
+rr.summary <- summary(rr.huber2)
+lmod.summary <- summary(lmod2)
+
+percentage_difference<-round(((lmod2$coefficients-rr.huber2$coefficients)/lmod2$coefficients)*100,0)
+
+coef_df <- data.frame(
+           "Linear Model" = lmod2$coefficients, 
+           "RobustHuber"= rr.huber2$coefficients,
+           "Percentage Difference"=percentage_difference
+            )
+
+summary(lmod2)
+summary(rr.huber2)
+
+knitr::kable(coef_df, caption="Co-efficients Comparison")
+
+par(mfrow=c(2,2))
+plot(lmod2)
+plot(rr.huber2)
+```
+
+
+```{R}
+#rr.huber2$w
+hweights <- data.frame( resid = rr.huber2$resid, weight = rr.huber2$w)
+hweights1 <- hweights[order(rr.huber2$w), ]
+hweights1[1:5, ]
+```
+
+
+```{R}
+plot(
+  data_train$weight,
+  data_train$height,
+  xlab = "Weight",
+  ylab = "Height",
+  main = "Weight Vs Height"
+)
+
+# plot all labels in black
+text(
+  data_train$weight,
+  data_train$height,
+  labels = 1:176,
+  pos = 3,
+  cex = 0.7
+)
+
+# highlight observations 39 and 169 in red
+points(
+  data_train$weight[c(39, 169)],
+  data_train$height[c(39, 169)],
+  col = "red",
+  pch = 19
+)
+
+text(
+  data_train$weight[c(39, 169)],
+  data_train$height[c(39, 169)],
+  labels = c(39, 169),
+  col = "red",
+  pos = 3,
+  cex = 0.8
+)
+```
+
+
+### ../Modules/Week 7/Model_Data_Lab_Example_Bad_Data.Rmd
+
+```{R}
+require(stats); require(graphics) 
+longley_data<-data.frame(longley)
+
+# Linear with all predictors
+longley.reg <- stats::lm(Employed ~ .,data=longley_data)
+summary(longley.reg)
+summary(longley.reg)
+# Coefficients
+coeff.lm.df <- data.frame(Linear = longley.reg$coefficients)
+coeff.lm.df$Coefficients <- rownames(coeff.lm.df)
+rownames(coeff.lm.df) <- NULL
+coeff.lm.df <- dplyr::select(coeff.lm.df, Coefficients, Linear) 
+coeff.q1.df <-
+  coeff.lm.df %>%
+  dplyr::mutate(Linear = ifelse(Linear == 0, "--", scales::comma(Linear, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+```
+
+
+```{R}
+set.seed(1023)
+longley.reg.both <- olsrr::ols_step_both_p(longley.reg, pent=0.35, prem=0.05, details=TRUE)
+
+plot(longley.reg.both)
+longley.reg.sw.final <- longley.reg.both$model
+summary(longley.reg.sw.final)
+summary(longley.reg.sw.final)
+# Coefficients
+coeff.sw.df <- data.frame(Stepwise = longley.reg.sw.final$coefficients)
+coeff.sw.df$Coefficients <- rownames(coeff.sw.df)
+coeff.q1.df <-
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.sw.df, by = "Coefficients") %>%
+  dplyr::mutate(Stepwise = ifelse(dplyr::coalesce(Stepwise, 0) == 0, "--", 
+                                  scales::comma(Stepwise, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+```
+
+
+```{R}
+set.seed(1023)
+olsrr::ols_vif_tol(longley.reg)
+longley.cor.df <- data.frame(stats::cor(longley_data))
+longley.cor.df$Predictor1 <- colnames(longley.cor.df)
+longley.cor.df <-
+  longley.cor.df %>%
+  reshape2::melt(id.vars = c('Predictor1'), variable.name = 'Predictor2', value.name = 'Correlation') %>%
+  dplyr::filter(Correlation >= 0.8 & Predictor1 != Predictor2) %>%
+  dplyr::arrange(desc(Correlation)) %>%
+  dplyr::filter(dplyr::row_number() == 1 | dplyr::lag(Correlation, 1) != Correlation)
+knitr::kable(longley.cor.df, caption = "Highly Correlated Predictors")
+
+# Separate x and y
+x <- data.matrix(dplyr::select(longley, -Employed))
+y <- longley$Employed
+
+# Cross Validate and calculate best lambda
+longley.ridge.cv <- glmnet::cv.glmnet(x, y, alpha=0, nlambda=100,lambda.min.ratio=0.0001)
+best.lambda.ridge <- longley.ridge.cv$lambda.min
+plot(longley.ridge.cv)
+
+print(paste0("Ridge best lambda of ", round(best.lambda.ridge, digits = 3)))
+
+# Coefficients Best Lambda
+coeff.ridge.df <- stats::coef(longley.ridge.cv , s = best.lambda.ridge)
+coeff.ridge.df <- data.frame(Coefficients = coeff.ridge.df@Dimnames[[1]],
+                             Ridge = coeff.ridge.df@x)
+coeff.q1.df <-
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.ridge.df, by = "Coefficients") %>%
+  dplyr::mutate(Ridge = ifelse(dplyr::coalesce(Ridge, 0) == 0, "--", 
+                               scales::comma(Ridge, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+```
+
+
+```{R}
+set.seed(1023)
+# Cross Validate and calculate best lambda
+reg.lasso.cv <- glmnet::cv.glmnet(x, y, alpha=1, nlambda=100, lambda.min.ratio=0.0001)
+best.lambda.lasso <- reg.lasso.cv$lambda.min
+plot(reg.lasso.cv)
+print(paste0("Lasso best lambda of ", round(best.lambda.lasso, digits = 3)))
+
+# Coefficients
+coeff.lasso <- stats::coef(reg.lasso.cv, s = "lambda.min")
+coeff.lasso.names <- coeff.lasso@Dimnames[[1]]
+coeff.lasso.df <- data.frame()
+for (i in 1:length(coeff.lasso)) {
+  df <- data.frame(Coefficients = coeff.lasso.names[i],
+                   Lasso = coeff.lasso[i])
+  coeff.lasso.df <- rbind(df, coeff.lasso.df)
+}
+coeff.q1.df <-
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.lasso.df, by = "Coefficients") %>%
+  dplyr::mutate(Lasso = ifelse(dplyr::coalesce(Lasso, 0) == 0, "--", 
+                               scales::comma(Lasso, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+rm(df)
+```
+
+
+```{R}
+set.seed(1023)
+# Cross Validate and calculate best lambda
+reg.enet.cv <- glmnet::cv.glmnet(x, y, alpha=0.5, nlambda=100, lambda.min.ratio=0.0001)
+best.lambda.enet <- reg.enet.cv$lambda.min
+print(paste0("ElasticNet best lambda of ", round(best.lambda.enet, digits = 3)))
+
+# Coefficients
+coeff.en <- stats::coef(reg.enet.cv, s = best.lambda.enet)
+coeff.en.names <- coeff.en@Dimnames[[1]]
+coeff.en.df <- data.frame()
+for (i in 1:length(coeff.en)) {
+  df <- data.frame(Coefficients = coeff.en.names[i],
+                   ElasticNet = coeff.en[i])
+  coeff.en.df <- rbind(df, coeff.en.df)
+}
+coeff.q1.df <- 
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.en.df, by = "Coefficients") %>%
+  dplyr::mutate(ElasticNet = ifelse(dplyr::coalesce(ElasticNet, 0) == 0, "--", 
+                                    scales::comma(ElasticNet, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+rm(df)
+```
+
+
+```{R}
+set.seed(1023)
+# Influential observations
+olsrr::ols_plot_resid_lev(longley.reg)
+longley_data %>%
+  dplyr::mutate(Observation = dplyr::row_number()) %>%
+  dplyr::select(Observation, Employed) %>%
+  cbind(dplyr::select(data.frame(stats::influence.measures(longley.reg)$infmat), cook.d)) %>% 
+  dplyr::arrange(desc(cook.d)) %>%
+  dplyr::filter(cook.d >= 0.04) %>%
+  knitr::kable(caption = "Influential Observations", row.names = FALSE)
+olsrr::ols_plot_cooksd_chart(longley.reg)
+
+# Huber Robust Regression
+longley.reg.huber <- MASS::rlm(Employed ~ ., psi = psi.huber, data = longley)
+summary(longley.reg.huber)
+
+# Coefficients
+coeff.huber.df <- data.frame(Huber = longley.reg.huber$coefficients)
+coeff.huber.df$Coefficients <- rownames(coeff.huber.df)
+coeff.q1.df <-
+  coeff.q1.df %>%
+  dplyr::left_join(coeff.huber.df, by = "Coefficients") %>%
+  dplyr::mutate(Huber = ifelse(dplyr::coalesce(Huber, 0) == 0, "--",
+                               scales::comma(Huber, accuracy = 1e-4)))
+knitr::kable(coeff.q1.df, caption = "Model Coefficients")
+```
+
+
+```{R}
+set.seed(1023)
+Employed.predictors <- colnames(dplyr::select(longley, -Employed))
+longley_data$Employed.lm <- stats::predict(longley.reg, longley_data)
+longley_data$Employed.sw.lm <- stats::predict(longley.reg.sw.final, longley_data)
+longley_data$Employed.ridge <-
+  stats::predict(longley.ridge.cv, s = best.lambda.ridge, 
+                 newx = data.matrix(longley_data[Employed.predictors]))[,1]
+longley_data$Employed.lasso <-
+  stats::predict(reg.lasso.cv, s = best.lambda.lasso, 
+                 newx = data.matrix(longley_data[Employed.predictors]))[,1]
+longley_data$Employed.en <-
+  stats::predict(reg.enet.cv, s = best.lambda.enet, 
+                 newx = data.matrix(longley_data[Employed.predictors]))[,1]
+longley_data$Employed.huber <- stats::predict(longley.reg.huber, longley_data)
+
+# SST, SSE, and R2
+sst <- sum((longley_data$Employed - mean(longley_data$Employed))^2)
+sse.lm <- sum((longley_data$Employed - longley_data$Employed.lm)^2)
+sse.sw <- sum((longley_data$Employed - longley_data$Employed.sw.lm)^2)
+sse.ridge <- sum((longley_data$Employed - longley_data$Employed.ridge)^2)
+sse.lasso <- sum((longley_data$Employed - longley_data$Employed.lasso)^2)
+sse.enet <- sum((longley_data$Employed - longley_data$Employed.en)^2)
+sse.huber <- sum((longley_data$Employed - longley_data$Employed.huber)^2)
+data.frame(Model = c('Linear', 'Stepwise', 'Ridge', 'Lasso', 'Elastic Net', 'Huber'),
+           R2 = c(round(1 - sse.lm / sst, digits = 4),
+                  round(1 - sse.sw / sst, digits = 4),
+                  round(1 - sse.ridge / sst, digits = 4),
+                  round(1 - sse.lasso / sst, digits = 4),
+                  round(1 - sse.enet / sst, digits = 4),
+                  round(1 - sse.huber / sst, digits = 4)),
+           MSE = c(round(sse.lm / nrow(longley_data), digits = 4),
+                  round(sse.sw / nrow(longley_data), digits = 4),
+                  round(sse.ridge / nrow(longley_data), digits = 4),
+                  round(sse.lasso / nrow(longley_data), digits = 4),
+                  round(sse.enet / nrow(longley_data), digits = 4),
+                  round(sse.huber / nrow(longley_data), digits = 4))) %>%
+  dplyr::arrange(desc(R2)) %>%
+  knitr::kable(caption = "R2 of Different Models")
+```
+
+
+```{R}
+# Data Preparations
+
+GNPPC<-data.frame(longley_data$GNP/longley$Population)
+
+# New Predictors
+Employed.predictors2 <- cbind(GNPPC,longley_data$Unemployed,longley_data$Armed.Forces,longley_data$GNP.deflator,longley_data$Year)
+#New Data
+longley2<-cbind(longley_data$Employed,Employed.predictors2)
+colnames(longley2)<-c("Employed","GNP.Per.Capita","Unemployed","Armed.Forces","GNP.deflator","Year")
+
+# Least Squares using full data
+longley.reg.full2 <- stats::lm(Employed ~ ., data = longley2)
+summary(longley.reg.full2)
+summary(longley.reg.full2)
+# Huber's robust method using full data
+reg.huber.full2 <- MASS::rlm(Employed ~ ., psi = psi.huber, data = longley2)
+summary(reg.huber.full2)
+summary(reg.huber.full2)
+# Coefficients
+coeff.q2.df <- data.frame(Linear = longley.reg.full2$coefficients)
+coeff.q2.df$Coefficients <- rownames(coeff.q2.df)
+rownames(coeff.q2.df) <- NULL
+coeff.q2.huber.df <- data.frame(Huber = reg.huber.full2$coefficients)
+coeff.q2.huber.df$Coefficients <- rownames(coeff.q2.huber.df)
+coeff.q2.df <-
+  coeff.q2.df %>%
+  dplyr::select(Coefficients, Linear) %>%
+  dplyr::left_join(coeff.q2.huber.df, by = "Coefficients") %>%
+  dplyr::mutate(Diff = round(abs(Linear - Huber), digits = 4),
+                Linear = ifelse(Linear == 0, "--", scales::comma(Linear, accuracy = 1e-4)),
+                Huber = ifelse(dplyr::coalesce(Huber, 0) == 0, "--",
+                               scales::comma(Huber, accuracy = 1e-4))) %>%
+  dplyr::arrange(desc(Diff))
+knitr::kable(coeff.q2.df, caption = "Model Coefficients")
+
+# SST, SSE, and R2
+sst.q2 <- sum((longley_data$Employed - mean(longley_data$Employed))^2)
+sse.q2.lm <- sum(longley.reg.full2$residuals^2)
+sse.q2.huber <- sum(reg.huber.full2$residuals^2)
+data.frame(Model = c('Linear', 'Huber.Robust'),
+           R2 = c(round(1 - sse.q2.lm / sst.q2, digits = 4),
+                  round(1 - sse.q2.huber / sst.q2, digits = 4)),
+           MSE = c(round(sse.q2.lm / nrow(fat), digits = 4),
+                   round(sse.q2.huber / nrow(fat), digits = 4))) %>%
+  knitr::kable(caption = "R2 of Different Models")
+```
+
+
+```{R}
+olsrr::ols_plot_resid_lev(longley.reg.full2)
+olsrr::ols_plot_cooksd_chart(longley.reg.full2)
+
+# Huber Weights
+longley2$weights <- reg.huber.full2[["w"]]
+
+# Lowest Weights
+longley2 %>%
+  dplyr::mutate(Observation = dplyr::row_number()) %>%
+  dplyr::arrange(weights) %>%
+  dplyr::filter(dplyr::row_number() <= 5) %>%
+  dplyr::select(Observation, Employed, weights) %>%
+  knitr::kable(caption = "Observations with 5 Lowest Weights", row.names = FALSE)
+```
+
+
+```{R}
+# Deleted Studentized Residual
+longley2$del.stud.res <- abs(stats::rstudent(longley.reg.full2))
+alpha <- 0.05
+n <- nrow(longley2)
+p <- length(longley.reg.full2$coefficients)
+longley2$t.val <- abs(stats::qt(1-alpha/(2*n), n-p-1))
+
+longley2 %>%
+  dplyr::mutate(Observation = dplyr::row_number()) %>%
+  dplyr::arrange(desc(del.stud.res)) %>%
+  dplyr::filter(del.stud.res >= t.val) %>%
+  dplyr::select(Observation, Employed, del.stud.res, t.val) %>%
+  knitr::kable(caption = "Influential Observations", row.names = FALSE)
+
+# Plot
+ggplot2::ggplot(longley2, ggplot2::aes(x=Year, y=Unemployed)) +
+  ggplot2::geom_point() + # Show dots
+  ggplot2::geom_text(
+    label=rownames(longley2),
+    nudge_x = 0.25, nudge_y = 0.25,
+    check_overlap = T)
+```
+
+
+```{R}
+##### CODE FROM HAKAN #####
+
+# cutoff.prg<-function(pred,act){
+## pred<-predicted_probabilities
+## act<-true_labels
+# p<-seq(0,1,0.01)
+# n<-length(p)
+# out<-matrix(0,nrow=n,ncol=12)
+# for(i in 1:n){
+# predictions <- ifelse(pred >p[i], 1, 0)
+# confusion_matrix <- confusionMatrix(as.factor(predictions),as.factor(act),mode="prec_recall", positive = "1")
+# out[i,]<-cbind(p=p[i],t(confusion_matrix[[4]]))
+# }
+# dimnames(out)[[2]]<-c("p","Sensitivity","Specificity","Pos Pred Value","Neg Pred Value","Precision","Recall", "F1","Prevalence","Detection Rate","Detection Prevalence", "Balanced Accuracy")
+# out
+# }
+
+# test<-cutoff.prg(predicted_probabilities,true_labels)
+# plot(test[,1],test[,8],xlab="cut off",ylab="F1")
+# test[which.max(test[,8]),]
+
+########### Extra CODE ################
+
+# >install.packages("OptimalCutpoints")
+# >library(OptimalCutpoints)
+# ># Fit your logistic regression model
+# >my_model <- glm(y ~ x1 + x2, data = my_data, family = "binomial")
+# ># Calculate predicted probabilities
+# >predicted_probs <- predict(my_model, type = "response")
+# ># Find optimal cut-off based on equality of sensitivity and specificity
+# >optimal_cut <- optimise.cutpoint(obs = my_data$y, pred = predicted_probs, criterion  >#"both")
+# ># Access the optimal cut-off point
+# >optimal_cut$threshold
+
+
+```
+
+
+### ../Modules/Week 7/Remedial Measures Rcodes/Ridge Lasso and ElasticNet -BodyFat.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+library(glmnet)
+BodyFat<- read.csv("../Modules/Week 7/Remedial Measures Rcodes/Body Fat.csv")
+#need to define X and Y matrix for glmnet
+#take out Y and law indicator from data for X (all independent variable)
+#to get all the Xs (independent Variables)
+x <- model.matrix(Y~., BodyFat)[,-c(1)]
+#our dependent variable
+y <- BodyFat$Y
+RidgeMod <- glmnet(x, y, alpha=0, nlambda=100,lambda.min.ratio=0.0001)
+
+#coefficents for the smallest lambda
+coef(RidgeMod, s = min(RidgeMod$lambda))
+#coefficents for the largest lambda
+coef(RidgeMod, s = max(RidgeMod$lambda))
+```
+
+
+```{R}
+CvRidgeMod <- cv.glmnet(x, y, alpha=0, nlambda=100,lambda.min.ratio=0.0001)
+par(mfrow=c(1,1))
+plot(CvRidgeMod)
+#get the optimal lambda
+best.lambda.ridge <- CvRidgeMod$lambda.min
+best.lambda.ridge 
+coef(CvRidgeMod , s = "lambda.min")
+
+```
+
+
+```{R}
+predict(RidgeMod, s=best.lambda.ridge, type="coefficients")[1:4, ]
+```
+
+
+```{R}
+LassoMod <- glmnet(x, y, alpha=1, nlambda=100,lambda.min.ratio=0.0001)
+#coefficents for the smallest lambda
+coef(LassoMod, s = min(LassoMod$lambda))
+#coefficents for the largest lambda
+coef(LassoMod, s = max(LassoMod$lambda))
+
+plot(LassoMod,xvar="norm",label=TRUE)
+CvLassoMod <- cv.glmnet(x, y, alpha=1, nlambda=100,lambda.min.ratio=0.0001)
+plot(CvLassoMod)
+#get the optimal lambda
+best.lambda.lasso <- CvLassoMod$lambda.min
+best.lambda.lasso
+coef(CvLassoMod, s = "lambda.min")
+```
+
+
+```{R}
+EnetMod <- glmnet(x, y, alpha=0.5, nlambda=100,lambda.min.ratio=0.0001)
+CvElasticnetMod <- cv.glmnet(x, y,alpha=0.5,nlambda=100,lambda.min.ratio=0.0001)
+best.lambda.enet <- CvElasticnetMod$lambda.min
+best.lambda.enet
+coefficients(EnetMod,s=best.lambda.enet)
+coef(CvElasticnetMod, s = "lambda.min")
+```
+
+
+```{R}
+f<-lm(Y~.,data=BodyFat)
+y_hat.ridge <- predict(RidgeMod, s = best.lambda.ridge, newx = x)
+y_hat.lasso <- predict(LassoMod, s = best.lambda.lasso, newx = x)
+y_hat.enet <- predict(CvElasticnetMod , s = best.lambda.enet, newx = x)
+
+###(## Model Performance on the Train Data
+library(caret)
+## Linear Regression Model
+Predicted<-f$fitted.values
+ModelTrain.reg<-data.frame(obs = BodyFat$Y, pred=Predicted)
+reg<-defaultSummary(ModelTrain.reg)
+
+## Ridge Regression Model
+Predicted<-c(y_hat.ridge)
+ModelTrain.ridge<-data.frame(obs = BodyFat$Y, pred=Predicted)
+ridge<-defaultSummary(ModelTrain.ridge)
+
+## Lasso Regression Model
+Predicted<-c(y_hat.lasso)
+ModelTrain.lasso<-data.frame(obs = BodyFat$Y, pred=Predicted)
+lasso<-defaultSummary(ModelTrain.lasso)
+
+## Elastic Net Regression Model
+Predicted<-c(y_hat.enet)
+ModelTrain.enet<-data.frame(obs = BodyFat$Y, pred=Predicted)
+enet<-defaultSummary(ModelTrain.enet)
+
+data.frame(rbind(reg,ridge,lasso,enet))
+```
+
+
+### ../Modules/Week 7-9/Decision Tree - Part 2.Rmd
+
+```{R}
+knitr::opts_chunk$set(error = TRUE)
+```
+
+
+```{R}
+library(tree)
+```
+
+
+```{R}
+library(ISLR2)
+attach(Carseats)
+High <- factor(ifelse(Sales <= 8, "No", "Yes"))
+```
+
+
+```{R}
+Carseats <- data.frame(Carseats, High)
+```
+
+
+```{R}
+tree.carseats <- tree(High ~ . - Sales, Carseats)
+```
+
+
+```{R}
+summary(tree.carseats)
+```
+
+
+```{R}
+plot(tree.carseats)
+text(tree.carseats, pretty = 0)
+```
+
+
+```{R}
+tree.carseats
+```
+
+
+```{R}
+set.seed(2)
+train <- sample(1:nrow(Carseats), 200)
+Carseats.test <- Carseats[-train, ]
+High.test <- High[-train]
+tree.carseats <- tree(High ~ . - Sales, Carseats,
+    subset = train)
+tree.pred <- predict(tree.carseats, Carseats.test,
+    type = "class")
+table(tree.pred, High.test)
+(104 + 50) / 200
+#confusion Matrix
+library(caret)
+confusion_matrix <- confusionMatrix(as.factor(tree.pred),as.factor(Carseats.test$High),mode="prec_recall", positive = "Yes")
+confusion_matrix
+```
+
+
+```{R}
+set.seed(7)
+cv.carseats <- cv.tree(tree.carseats, FUN = prune.misclass)
+names(cv.carseats)
+cv.carseats
+```
+
+
+```{R}
+par(mfrow = c(1, 2))
+plot(cv.carseats$size, cv.carseats$dev, type = "b")
+plot(cv.carseats$k, cv.carseats$dev, type = "b")
+```
+
+
+```{R}
+prune.carseats <- prune.misclass(tree.carseats, best = 9)
+plot(prune.carseats)
+text(prune.carseats, pretty = 0)
+```
+
+
+```{R}
+tree.pred <- predict(prune.carseats, Carseats.test,type = "class")
+table(tree.pred, High.test)
+(97 + 58) / 200
+confusion_matrix <- confusionMatrix(as.factor(tree.pred),as.factor(Carseats.test$High),mode="prec_recall", positive = "Yes")
+confusion_matrix
+```
+
+
+```{R}
+prune.carseats <- prune.misclass(tree.carseats, best = 14)
+plot(prune.carseats)
+text(prune.carseats, pretty = 0)
+tree.pred <- predict(prune.carseats, Carseats.test,type = "class")
+table(tree.pred, High.test)
+(102 + 52) / 200
+confusion_matrix <- confusionMatrix(as.factor(tree.pred),as.factor(Carseats.test$High),mode="prec_recall", positive = "Yes")
+confusion_matrix
+```
+
+
+### ../Modules/Week 9-10/Logistic-Regression.Rmd
+
+```{R}
+tmp <- tempfile(fileext = ".rda")
+download.file(
+  "https://raw.githubusercontent.com/cran/faraway/master/data/wcgs.rda",
+  destfile = tmp,
+  mode = "wb"
+)
+load(tmp)
+head(wcgs)
+```
+
+
+```{R}
+#library(faraway)
+#data(wcgs, package="faraway")
+lmod <- glm(chd ~ height + cigs, family = binomial, wcgs)
+summary(lmod)
+beta <- coef(lmod)
+```
+
+
+```{R}
+1-pchisq(1781.2 - 1749, 2)
+```
+
+
+```{R}
+exp(beta[3])
+exp(beta[3]*20)
+```
+
+
+```{R}
+anova(lmod, test="Chi") # it is logistic regression, you need to specify that it is Chi Square test
+
+lmodc <- glm(chd ~ cigs, family = binomial, wcgs)
+anova(lmodc,lmod, test="Chi")
+#alternatively
+drop1(lmod,test="Chi") #this GLM Test for each variable
+lmode <- glm(chd ~ height, family = binomial, wcgs)
+anova(lmode,lmod, test="Chi")
+```
+
+
+```{R}
+confint(lmod)
+exp(confint(lmod))
+```
+
+
+```{R}
+test<-data.frame(cbind(height=72,cigs=0))
+predict(lmod,test,type="response",se.fit=TRUE)
+```
+
+
+```{R}
+library(ResourceSelection)
+hoslem.test(lmod$y,fitted(lmod),g=5)
+```
+
+
+```{R}
+#lets add BMI to the data and then perform variable selection
+wcgs$bmi <- with(wcgs, 703*wcgs$weight/(wcgs$height^2))
+lmod <- glm(chd ~ age + height + weight +bmi + sdp + dbp + chol + dibep + cigs +arcus, family=binomial, wcgs)
+lmodr <- step(lmod, trace=0)
+summary(lmodr)
+```
+
+
+```{R}
+drop1(lmodr,test="Chi")
+```
+
+
+```{R}
+lmodr1<-glm(formula = chd ~ age + height + bmi + sdp + chol + dibep + 
+    cigs , family = binomial, data = wcgs)
+summary(lmodr1)
+drop1(lmodr1,test="Chi")
+```
+
+
+```{R}
+library(caret)
+#convert defaults from "Yes" and "No" to 1's and 0's
+true_labels<- ifelse(wcgs$chd=="yes", 1, 0)
+predicted_probabilities <- predict(lmodr1, wcgs, type="response")
+
+#using 0.5 as a cutoff to predict the class
+predictions <- ifelse(predicted_probabilities > 0.5, 1, 0)
+confusion_matrix <- confusionMatrix(as.factor(predictions),as.factor(true_labels),mode="prec_recall", positive = "1")
+confusion_matrix  
+
+#using 0.4 as a cutoff to predict the class
+predictions <- ifelse(predicted_probabilities > 0.4, 1, 0)
+confusion_matrix <- confusionMatrix(as.factor(predictions),as.factor(true_labels),mode="prec_recall", positive = "1")
+confusion_matrix  
+
+#using 0.1 as a cutoff to predict the class
+predictions <- ifelse(predicted_probabilities > 0.1, 1, 0)
+confusion_matrix <- confusionMatrix(as.factor(predictions),as.factor(true_labels),mode="prec_recall", positive = "1")  
+confusion_matrix
+
+#using 0.08 as a cutoff to predict the class
+predictions <- ifelse(predicted_probabilities > 0.08, 1, 0)
+confusion_matrix <- confusionMatrix(as.factor(predictions),as.factor(true_labels),mode="prec_recall", positive = "1")  
+confusion_matrix
+```
+
+
+```{R}
+prob<-predicted_probabilities
+library(pROC)
+par(mfrow=c(1,1))
+credit_roc <- roc(wcgs$chd,prob,levels=c("yes", "no"))
+plot.roc(credit_roc,print.auc=TRUE,main = "CHD Curve ", col = "blue", lwd = 2, legacy.axes = TRUE)
+```
+
+
+```{R}
+cutoff.prg<-function(pred,act){
+# pred<-predicted_probabilities
+# act<-true_labels
+p<-seq(0,1,0.01)
+n<-length(p)
+out<-matrix(0,nrow=n,ncol=12)
+for(i in 1:n){
+predictions <- ifelse(pred >p[i], 1, 0)
+confusion_matrix <- confusionMatrix(as.factor(predictions),as.factor(act),mode="prec_recall", positive = "1")
+out[i,]<-cbind(p=p[i],t(confusion_matrix[[4]]))
+}
+dimnames(out)[[2]]<-c("p","Sensitivity","Specificity","Pos Pred Value","Neg Pred Value","Precision","Recall", "F1","Prevalence","Detection Rate","Detection Prevalence", "Balanced Accuracy")
+out
+}
+
+test<-cutoff.prg(predicted_probabilities,true_labels)
+plot(test[,1],test[,8],xlab="cut off",ylab="F1")
+test[which.max(test[,8]),]
+
+```
+
+
+```{R}
+plot(test[,1],                           
+     test[,8],
+     type = "l",
+     col = 2,
+     xlab = "cut off",
+     ylab = "rates")
+ 
+# Add line graphs of other two data set
+lines(test[,1],                             
+      test[,2],
+      type = "l",
+      col = 3)
+lines(test[,1],                             
+      test[,3],
+      type = "l",
+      col = 4)
+# Add legend in top right corner
+legend("topright",                           
+       c("F1", "Sensitivity", "Specificity"),
+       lty = 1,
+       col = 2:4)
+```
+
+
+### ../Modules/Week 9-10/Poisson-and-Negative-Binomial-Regression.Rmd
+
+```{R}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+require(ggplot2)
+require(sandwich)
+require(msm)
+#library(faraway)
+library(MASS)
+
+library(ISLR2)
+str(Bikeshare)
+dim(Bikeshare)
+names(Bikeshare)
+
+modp<- lm(
+    bikers ~ mnth + hr + workingday + temp + weathersit,
+    data = Bikeshare
+  )
+summary(modp)
+anova(modp,test="Chi")
+drop1(modp,test="Chi")
+
+```
+
+
+```{R}
+library(MASS)
+
+modn <- glm( bikers ~ mnth + hr + workingday + temp + weathersit,negative.binomial(1),data = Bikeshare)
+summary(modn)
+anova(modn,test="Chi")
+drop1(modn,test="Chi")
+
+pred.dat<-data.frame(cbind(Y=Bikeshare$bikers,Yhat_P=modp$fitted.values,Yhat_NP=modn$fitted.values))
+
+sum((pred.dat$Y-pred.dat$Yhat_P)^2)
+sum((pred.dat$Y-pred.dat$Yhat_NP)^2)
+
+```
+
+

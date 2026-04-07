@@ -1,0 +1,193 @@
+---
+title: 'CSCI E-106:Assignment 1 Solutions'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Due Date: February 6, 2026 at 11:59 pm EST
+### Instructions
+
+Students should submit their reports on Canvas. The report needs to clearly state what question is being solved, step-by-step walk-through solutions, and final answers clearly indicated. Please solve by hand where appropriate.
+
+Please submit two files: (1) a R Markdown file (.Rmd extension) and (2) a PDF document, word, or html generated using knitr for the .Rmd file submitted in (1) where appropriate. Please, use RStudio Cloud for your solutions.
+
+
+```{r load data}
+load(url("https://raw.githubusercontent.com/cran/faraway/master/data/prostate.rda"))
+
+```
+
+
+--------------------------------------------------------------------------------------
+
+
+## Problem 1 
+
+The dataset prostate comes from a study on 97 men with prostate cancer who were due to receive a radical prostatectomy. You can download this data set by installing faraway library. To get the data set, copy and paste the r command: install.packages("faraway"); library(faraway);data(prostate, package="faraway"). (100 points)
+
+The response variable for this assignment is lpsa (log of prostate‑specific antigen). The dataset includes the following variables:\newline
+- lcavol: log(cancer volume)\newline
+- lweight: log(prostate weight)\newline
+- age: age of patient\newline
+- lbph: log(benign prostatic hyperplasia amount)\newline
+- svi: seminal vesicle invasion (indicator)\newline
+- lcp: log(capsular penetration)\newline
+- gleason: Gleason score\newline
+- pgg45: percentage Gleason scores 4 or 5\newline
+- lpsa: log(prostate specific antigen)\newline
+
+
+a-) How many observations are in the dataset? (10 points)
+```{r, include=TRUE}
+
+a<-nrow(prostate)
+
+print(a)
+
+```
+There are 97 observations. 
+
+b-) Calculate the mean and median of each variable. Discuss whether any variables appear to have outliers, and briefly describe how you identified them.(20 points)
+
+```{r}
+summary(prostate)[4,]  #mean
+summary(prostate)[3,]  #median
+```
+
+Identify outliers using IQR method
+```{r}
+outliers <- function(x) {
+  q1 <- quantile(x, 0.25, na.rm = TRUE)
+  q3 <- quantile(x, 0.75, na.rm = TRUE)
+  iqr <- q3 - q1
+  lower_bound <- q1 - 1.5 * iqr
+  upper_bound <- q3 + 1.5 * iqr
+  return(x < lower_bound | x > upper_bound)
+}
+
+# Apply outlier detection to each variable
+outlier_summary <- sapply(prostate, function(x) sum(outliers(x), na.rm = TRUE))
+
+# Print outlier summary (number of outliers)
+print(outlier_summary)
+
+```
+
+
+```{r, include=TRUE}
+
+#Boxplot
+
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1)) 
+
+for (v in names(prostate)) {
+  boxplot(prostate[[v]], main = v)
+}
+
+
+
+```
+Using boxplots, outliers using 1.5×IQR rule are illustrated as as small circles above the main box. We used the R- code "sapply(outliers, length)" also that shows how many outliers we have per variable. We detect 4 for lweight, 5 for age, 21 for svi, 5 for gleason and 4 for lpsa. 
+
+
+c-) Compute the correlation matrix for all variables.Create scatterplots of each predictor versus the response variable lpsa. Identify which predictors appear to be strongly correlated with lpsa, using both the correlations and the plots to justify your answer. (20 points)
+```{r, include=TRUE}
+#correlation
+correlation_matrix <- cor(prostate)
+correlation_matrix
+
+#Correlation with the variable "lpsa"
+cor_lpsa <- cor(prostate)[, "lpsa"]
+
+cor_lpsa
+
+
+#Scatterplots
+predictors <- setdiff(names(prostate), "lpsa")
+
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1))  
+
+for (v in predictors) {
+  plot(
+    prostate[[v]], prostate$lpsa,
+    xlab = v,
+    ylab = "lpsa",
+    main = paste(v, "vs lpsa")
+  )
+}
+
+```
+Using a rule of thumb (strong>0.6; moderate as between 0.4 and 0.6; and, weak below 0.4), the"lcavol" and "lpsa" pair shows a positive correlation, graph shows good linear fit.
+Also "svi", "lcp"and "pgg45" have moderate correlations and good linear fit with lpsa. 
+
+d-) Build separate simple linear regression models, by using lcavol, lweight and age to explain lpsa. For each model, clearly state the fitted regression equation with estimated coefficients. (25 points)
+
+```{r}
+model_1 <- lm(lpsa ~ lcavol, data = prostate)
+model_2 <- lm(lpsa ~ lweight, data = prostate)
+model_3 <- lm(lpsa ~ age, data = prostate)
+
+model_1
+model_2
+model_3
+
+```
+The regression equations are:
+
+Model 1:
+lpsa = 1.5073 + 0.7193 * lcavol
+
+Model 2:
+lpsa = -0.5281 + 0.8231 * lweight
+
+Model 3:
+lpsa = 0.7991 + 0.0263 * age
+
+
+e-) For each regression model from part (d):\newline
+- Plot lpsa versus each predictor separately.\newline
+- Add the fitted regression line to each plot.\newline
+- Based on the models and plots, choose the best single‑predictor model and explain your reasoning(25 points)
+
+```{r}
+
+#Show Models
+summary(model_1)
+summary(model_2)
+summary(model_3)
+
+par(mfrow = c(1, 3), mar = c(4, 4, 2, 1)) 
+
+# Model 1: lpsa ~ lcavol
+plot(
+  prostate$lcavol, prostate$lpsa,
+  xlab = "lcavol", ylab = "lpsa",
+  main = "lpsa vs lcavol"
+)
+abline(lm(lpsa ~ lcavol, data = prostate), col = "red", lwd = 2)
+
+# Model 2: lpsa ~ lweight
+plot(
+  prostate$lweight, prostate$lpsa,
+  xlab = "lweight", ylab = "lpsa",
+  main = "lpsa vs lweight"
+)
+abline(lm(lpsa ~ lweight, data = prostate), col = "red", lwd = 2)
+
+# Model 3: lpsa ~ age
+plot(
+  prostate$age, prostate$lpsa,
+  xlab = "age", ylab = "lpsa",
+  main = "lpsa vs age"
+)
+abline(lm(lpsa ~ age, data = prostate), col = "red", lwd = 2)
+
+
+```
+From the plots and regression summary, best linear fit is for lpsa vs lcavol.
