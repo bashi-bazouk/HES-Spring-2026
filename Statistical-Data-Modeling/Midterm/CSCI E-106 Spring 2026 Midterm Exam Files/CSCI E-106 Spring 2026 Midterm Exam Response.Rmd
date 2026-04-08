@@ -1,0 +1,251 @@
+---
+title: "CSCI E-106 : Spring 2026 Midterm Exam"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options("scipen" = 10)
+library(knitr)
+library(pander)
+library(rmarkdown)
+library(markdown)
+library(MASS)
+library(glmnet)
+library(olsrr)
+library(MASS)
+library(car)
+library(caret)
+```
+
+## Problem 1
+
+Refer to the housing dataset. 
+
+```{R}
+housing_data = read.csv("housing.csv")
+tail(housing_data)
+```
+
+##  Housing Dataset: Description
+
+The dataset includes **20,640 observations** and **10 variables**, including 8 numeric predictors, 1 categorical location variable, and 1 continuous target variable.
+
+### Variables
+
+- **longitude**: Longitude coordinate of the block group (negative values indicate locations west of the prime meridian)
+- **latitude**: Latitude coordinate of the block group
+- **housing_median_age**: Median age of housing units in the block group (years)
+- **total_rooms**: Total number of rooms across all housing units in the block group
+- **total_bedrooms**: Total number of bedrooms across all housing units
+- **population**: Total population of the block group
+- **households**: Number of households (occupied housing units)
+- **median_income**: Median income of the block group, measured in **tens of thousands of dollars**  
+  - Example: 3.5 corresponds to \$35,000
+- **median_house_value** *(target)*: Median house value in U.S. dollars
+- **ocean_proximity**: Categorical variable indicating the block group's proximity to the ocean  
+  - Possible values include: `"NEAR BAY"`, `"INLAND"`, `"NEAR OCEAN"`, `"ISLAND"`, `"1H OCEAN"`
+
+a-) **Data Cleaning and Initial Analysis (15 points)**
+- Remove the missing data by using na.omit command (e.g. housing<-na.omit(housing)).\newline
+- Create dummy variables for ocean_proximity by using `"INLAND"` as the reference group, meaning create dummy variables for the remaining categories ( "NEAR BAY"`, `"NEAR OCEAN"`, `"ISLAND"`, and `"<1H OCEAN"`)\newline
+- Remove the original ocean_proximity variable.\newline
+- Identify outliers and variables most strongly correlated with median_house_value and with each other.\newline
+- Discuss your findings\newline
+
+```{R}
+housing_data = read.csv("housing.csv")
+housing_data<-na.omit(housing_data)
+for (category in c("NEAR BAY", "NEAR OCEAN", "ISLAND", "<1H OCEAN")) {
+  housing_data[[category]] = 1*(housing_data$ocean_proximity == category)
+}
+housing_data = subset(housing_data, select = -ocean_proximity)
+
+housing_popN = nrow(housing_data)
+housing_lm = lm(median_house_value ~ ., housing_data)
+summary(housing_lm)
+```
+```{R}
+vif(housing_lm)
+```
+`total_bedrooms` has the highest variance inflation factor. Factors of 1-5 
+indicate moderate correlation. Factors greater than 5 indicate high correlation.
+
+```{R}
+housing_tb_model = lm(total_bedrooms ~ . - median_house_value, housing_data)
+summary(housing_tb_model)
+```
+```{R}
+plot(housing_data$total_bedrooms, housing_data$median_house_value)
+```
+```{R}
+housing_ols_step_both = olsrr::ols_step_both_adj_r2(housing_lm)
+housing_ols_step_both
+```
+
+The parameter `total_bedrooms` is omitted from the stepwise generated model. It 
+also had the highest vif.
+
+```{R}
+housing_df = attributes(logLik(housing_lm))$df
+housing_mean_leverage_score = housing_df / housing_popN
+housing_hvs = hatvalues(housing_lm)
+housing_hl_indices = which(housing_hvs > 3*housing_mean_leverage_score)
+
+length(housing_hl_indices)
+```
+
+There are 445 rows with hat values in excess of 3 times the mean leverage score.
+
+```{R}
+round(cor(housing_data), 3)
+```
+
+b- ) Create train and test data sets: select a random sample of 70% observations 
+from the data set for the train data set and remaining  cases for the test data 
+set. (use set.seed(547) before selecting the sample) (5 points)
+
+```{R}
+set.seed(547)
+popN = nrow(housing_data)
+alphaN = round(7/10*popN)
+housing_idx_train = sample(popN, size = alphaN, replace=FALSE)
+housing_train = p_data[housing_idx_train,]
+housing_trainN = nrow(housing_train)
+housing_test = p_data[-housing_idx_train,]
+housing_testN = nrow(housing_test)
+print(sprintf("%d/%d = %.4f", housing_trainN, housing_popN, housing_trainN/housing_popN))
+```
+
+**Use train data set to answer questions part c to g below**
+
+c-) Use stepwise (both ways) model selection to select the best model for 
+predicting  median_house_value by using all remaining variables as predictors on 
+the train data set. **Ensure that all variables are significant, use ** 
+$\alpha=0.05$. Justify your choice of model. (10 points).
+
+```{R}
+housing_lm = lm(median_house_value ~ ., housing_data)
+housing_ols_step_both = olsrr::ols_step_both_adj_r2(housing_lm)
+housing_ols_step_both
+```
+
+   **Check all regression assumptions visually**  
+   - Produce the four standard diagnostic plots from your fitted model.  
+   - Use these plots to assess:  
+     - Linearity  
+     - Normality of residuals  
+     - Constant variance (homoscedasticity)  
+     - Influential observations  
+   - Summarize what you observe from each plot.
+
+```{R}
+par(mfrow=c(2,2))
+plot(housing_lm)
+```
+The residuals are not uniformly distributed. There are some observable 
+non-linear patterns in the residuals. The Q-Q plot deviates at the ends,
+which is indicative of heavy tails, and non-normality of residuals. Residuals 
+have a megaphone shape, indicating non-uniform variance. There are quite a few 
+data points with leverage in excess of 0.2.
+
+   **Breusch–Pagan Test**  
+   - Conduct the Breusch–Pagan test for heteroscedasticity.  
+   - Report the test statistic and p‑value.  
+   - State whether the constant‑variance assumption is supported.
+
+```{R}
+bptest(housing_lm)
+```
+
+The null hypothesis is that the residuals are normally distributed. The 
+alternative hypothesis is that the residuals are not normally distributed.
+
+The p-value of 2.2e-16 is much less than the significance level, 0.05. 
+Therefore, we accept that the residuals are not normally distributed.
+
+   **Multicollinearity Assessment**  
+   - Compute Variance Inflation Factors (VIF) for all predictors.  
+   - Identify any predictors with high VIF values.  
+   - Briefly discuss whether multicollinearity is a concern in this model.
+
+```{R}
+vif(housing_lm)
+summary(vif(housing_lm) > 5)
+```
+A vif greater than 5 is taken as high vif. There are 6 factors with high vif.
+
+The preponderance of high vif factors may tell us that there is a problem with
+multicollinearity in this model.
+
+   **Model Performance on the Training Data**  
+   - Compute and report the following metrics:  
+     - Root Mean Squared Error (RMSE)  
+     - Mean Absolute Error (MAE)  
+     - R²  
+   - Comment on how well the model fits the training data.
+   
+```{R}
+
+```
+
+d-) Build a ridge regression model to predict  **median_house_value** by using 
+all variables and compare the model performance against your model on part c.
+
+```{R}
+housing_training_dm = model.matrix(median_house_value ~ ., housing_training)[,c(1)]
+housing_ridge = cv.glmnet(
+  
+)
+```
+
+e-) Build a elastic net regression model to predict  **median_house_value** by 
+using all variables and compare the model performance against your model on part 
+c.(10 points)
+
+```{R}
+
+```
+
+f-) Build a robust regression model by using the same model in part c and 
+comment on your findings. (10 points)
+
+```{R}
+
+```
+
+g-) Based on the performance on the train data set, which models would you 
+choose and why? (10 Points)
+
+**Use test data set to answer the question below**
+
+h-) Compare the performance of models built in part c, d, e, and f on the test 
+data set. Which model would you choose and why? (10 points)
+
+
+## Problem 2
+
+Use the train and test data you developed on the first question. Answer the 
+following questions. (20 Points)
+
+a-) Perform Box-Cox transformation to decide if **median_house_value**  variable 
+should be transformed by using all variables on the train data set. If indicated, 
+transform the **median_house_value**  variable and refit your regression model 
+on the train data set. Check all regression model assumptions visually with 
+appropriate graphs and conduct the Breusch-Pagan Test to determine whether or 
+not the error variances are constant. Please discuss your findings. (10 points)
+
+```{R}
+
+```
+b-) Evaluate the model you built on the transformed **median_house_value**  
+performance on the test data set and compare against the model you choose in 
+question 1 part h. Please discuss your findings. (10 points)
+
+```{R}
+
+```
